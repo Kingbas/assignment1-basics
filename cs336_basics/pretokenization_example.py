@@ -50,7 +50,7 @@ def find_chunk_boundaries(
 
 
 ## Usage
-with open(..., "rb") as f:
+with open('data/sample_10mb.txt', "rb") as f:
     num_processes = 4
     boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
 
@@ -59,4 +59,9 @@ with open(..., "rb") as f:
     for start, end in zip(boundaries[:-1], boundaries[1:]):
         f.seek(start)
         chunk = f.read(end - start).decode("utf-8", errors="ignore")
+        # # save every chunk
+        # # create the folder
+        # os.makedirs("data/chunk", exist_ok=True)
+        # with open(f"data/chunk/chunk_{start}_{end}.txt", "w") as chunk_file:
+        #     chunk_file.write(chunk)
         # Run pre-tokenization on your chunk and store the counts for each pre-token

@@ -164,3 +164,5 @@ cython_debug/
 
 # Datasets (large files, do not commit)
 data/
+
+.DS_Store
