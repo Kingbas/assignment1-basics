@@ -56,8 +56,15 @@ this is a teststring
 ### Problem (train_bpe): BPE Tokenizer Training (15 points) 💻
 
 - [ ] 实现完成,`uv run pytest tests/test_train_bpe.py` 通过
-- 实现位置:
+- 实现位置: cs336_basics/bpe_tokenizer_trainer.py
 - 备注(优化思路 / 踩坑记录):
+遍历 bytes 出 int:构造 tuple[bytes,...] 要用 bytes([x]) 或切片,不能直接迭代
+加权统计错:pair 计数应 += 词频,你早期写成先 +1 再乘词频
+重新绑定 bug:merger 里 pretrained_tokenization = freq_temp 不影响调用方 → 每轮选到同一个 pair(要么 return 接住,要么就地改)
+全局状态污染:模块级全局变量不重置,pytest 同进程跨测试泄漏 → 改用局部变量 + 返回值
+连续相同元素合并:(a,a,a) 合并要用 while 手动步进(命中 i+=2,否则 i+=1)
+平局规则:最高频有多个时按字典序取大,max(pc, key=lambda p:(pc[p], p))
+max() 空集合崩:语料 merge 榨干时 pair_count 为空 → 要加"无 pair 可合就停"的出口
 
 ### Problem (train_bpe_tinystories): BPE Training on TinyStories (2 points) 📝
 
@@ -83,6 +90,14 @@ this is a teststring
 
 - [ ] 实现完成,`uv run pytest tests/test_tokenizer.py` 通过
 - 实现位置:
+踩坑：
+遍历 bytes 出 int:构造 tuple[bytes,...] 要用 bytes([x]) 或切片,不能直接迭代
+加权统计错:pair 计数应 += 词频,你早期写成先 +1 再乘词频
+重新绑定 bug:merger 里 pretrained_tokenization = freq_temp 不影响调用方 → 每轮选到同一个 pair(要么 return 接住,要么就地改)
+全局状态污染:模块级全局变量不重置,pytest 同进程跨测试泄漏 → 改用局部变量 + 返回值
+连续相同元素合并:(a,a,a) 合并要用 while 手动步进(命中 i+=2,否则 i+=1)
+平局规则:最高频有多个时按字典序取大,max(pc, key=lambda p:(pc[p], p))
+max() 空集合崩:语料 merge 榨干时 pair_count 为空 → 要加"无 pair 可合就停"的出口
 
 ### Problem (tokenizer_experiments): Experiments with tokenizers (4 points) 📝
 

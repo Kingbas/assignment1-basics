@@ -88,7 +88,4 @@ def bpe_tokenizer_main(input_path: str, vocab_size: int, special_tokens: list[st
 if __name__ == '__main__':
     special_tokens = [r'<|endoftext|>', r'<|padding|>']
     vocab, merges = bpe_tokenizer_main('data/toy_corpus.txt', 512, special_tokens)
-    with open('data/toy_corpus_merges.json', mode='+rw') as f:
-        json.dump(vocab, f)
-    # with open('data/toy_corpus_merges.json', mode='+rw') as f:
     pass

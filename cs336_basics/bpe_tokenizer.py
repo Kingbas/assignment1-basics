@@ -1,83 +1,180 @@
 
 
+from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
+import json
 import regex as re
 
-"""
 
-    首先要对corpus进行pre_tokenization
-    利用
-    BPE算法是初始化词汇表为ASCII码 外加一个特殊字符 <|endoftext|>
+class Tokenizer(ABC):
+    """抽象基类：定义 tokenizer 的最小接口，不持有任何状态。"""
+
+    @classmethod
+    @abstractmethod
+    def from_files(cls, vocab_filepath, merges_filepath, special_tokens: list[str] | None = None) -> "Tokenizer":
+        """从序列化的 vocab/merges 文件构造 tokenizer（工厂方法）。"""
+        raise NotImplementedError
     
-"""
+    @abstractmethod
+    def encode(self, text: str) -> list[int]:
+        raise NotImplementedError
 
-# regex pattern used in gpt-2 pre-tokenizer
-PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-
-def init_vocab(special_tokens: list[str]) -> dict[int, bytes]:
-    vocab: dict[int, bytes] = {}
-    i = 0
-    for special_token in special_tokens:
-        vocab[i] = special_token.encode('UTF-8')
-        i = i + 1
-    for j in range(256):
-        vocab[i] = bytes([j])
-        i = i + 1
-    return vocab
-
-
-def bpe_tokenizer_worker(file_path: str, special_tokens: list[str], pretrained_tokenization: dict[tuple, int]):
-    with open(file=file_path) as f:
-        texts = f.read()
-    special_token_pattern = '|'.join(re.escape(special_token) for special_token in special_tokens)
-    texts = re.split(special_token_pattern, texts)
-
+    @abstractmethod
+    def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
+        raise NotImplementedError
     
-    for text in texts:
-        tokens = re.findall(PAT, text)
-        for token in tokens:
-            key = tuple(bytes([x]) for x in token.encode('UTF-8'))
-            pretrained_tokenization[key] = pretrained_tokenization.get(key, 0) + 1
-    pass
+    @abstractmethod
+    def decode(self, ids: list[int]) -> str:
+        raise NotImplementedError
+
+class BPETokenizer(Tokenizer):
+    """基于字节级 BPE 的 tokenizer。
+
+    vocab: token ID -> token 字节序列
+    merges: 按训练时产生顺序排列的合并规则列表
+    special_tokens: 需要原样保留、不参与 BPE 合并的特殊 token
+    """
+
+    def __init__(
+        self,
+        vocab: dict[int, bytes],
+        merges: list[tuple[bytes, bytes]],
+        special_tokens: list[str] | None = None,
+    ) -> None:
+        self.vocab = vocab
+        self.merges = merges
+        self.special_tokens = special_tokens or []
+        # 优先最长匹配
+        if self.special_tokens:
+            self.special_tokens = sorted(self.special_tokens, key=lambda token: (len(token), token), reverse=True)
+        # 若 special_tokens 不在 vocab 中，追加到 vocab 末尾
+        for token in self.special_tokens:
+            # 踩坑：注意这里要encode
+            if token.encode() not in vocab.values():
+                self.vocab[max(self.vocab.keys()) + 1] = token.encode()
+        # encoding时需要用token反查int
+        self.vocab_encoding = {value: key for key, value in self.vocab.items()}
+        # 初始化regex pattern
+        self.gpt2_pattern = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+        # 踩坑，如果没有special token的话就会是一个空的捕获组，因此
+        # print(repr(self.special_token_pattern))   # 期待看到 '()'
+        # print(re.split(self.special_token_pattern, 'the cat')[:8])   # 期待看到被碎成单字符
+        self.special_token_pattern = '(' + '|'.join(re.escape(special_token) for special_token in self.special_tokens) + ')' if special_tokens else None
+
+        # 构建 merge 优先级表 (bytes, bytes) -> rank（encode 时按 rank 选合并对）
+        self.merges_rank = {}
+        for i in range(len(self.merges)):
+            self.merges_rank[self.merges[i]] = i
 
 
-def bpe_tokenizer_merger(vocab, merges, pretrained_tokenization) -> dict[tuple, int]:
-    pair_count: dict[tuple[bytes, bytes], int] = {}
-    # 通过词频统计pair频率
-    for key in pretrained_tokenization.keys():
-        for i in range(len(key)-1):
-            pair = (key[i], key[i+1])
-            pair_count[pair] = pair_count.get(pair, 0) + pretrained_tokenization[key]
-    # 找到频次最高的pairs，对pairs进行字典序排序，将字典序最大者添加进vocab
-    best_pair = max(pair_count, key=lambda p: (pair_count[p], p))
-    vocab[len(vocab)] = b''.join(best_pair)
-    merges.append(best_pair)
-    # 再次遍历pretrained_tokenization，在每一个key上应用刚才的merge
-    freq_temp: dict[tuple, int] = {}
-    for token, freq in pretrained_tokenization.items():
-        temp_list = []
-        i = 0
-        while i < len(token):
-            if i < len(token) - 1 and tuple([token[i], token[i+1]]) == best_pair:
-                temp_list.append(token[i] + token[i+1])
-                i = i + 2
-            else:
-                temp_list.append(token[i])
-                i = i + 1
-        freq_temp[tuple(temp_list)] = freq
-    return freq_temp
+    @classmethod
+    def from_files(
+        cls,
+        vocab_filepath: str,
+        merges_filepath: str,
+        special_tokens: list[str] | None = None,
+    ) -> "BPETokenizer":
+        # 读取并反序列化 vocab/merges（格式与 trainer 的输出对齐），再调用 cls(...)
+        with open(vocab_filepath) as f:
+            vocab = json.load(f)
+        merges = []
+        with open(merges_filepath) as f:
+            while True:
+                line = f.readline().strip().split(' ')
+                if len(line) < 2:
+                    break
+                merges.append((line[0].encode(), line[1].encode()))
+                
+        return BPETokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
 
 
-def bpe_tokenizer_main(input_path: str, vocab_size: int, special_tokens: list[str]):
-    vocab: dict[int, bytes] = init_vocab(special_tokens)
-    pretrained_tokenization: dict[tuple, int] = {}
-    merges: list[tuple[bytes, bytes]] = []
+    def encode(self, text: str) -> list[int]:
+        encoded = []
+        # 1) 按 special_tokens 切分文本（注意长 token 优先，避免重叠 token 误切）
+        # 因为encode阶段特殊词也算一个词，不同于训练阶段，这里要将其捕获
+        if self.special_token_pattern:
+            texts = re.split(self.special_token_pattern, text)
+        else:
+            # 踩坑，这里texts要[text]
+            texts = [text]
+        # 2) 非特殊段用 GPT-2 PAT 预分词
+        for text in texts:
+            # 如果遇到了special tokens则跳过合并
+            if text in self.special_tokens:
+                encoded += [self.vocab_encoding[text.encode()]]
+                continue
+            # 获取pre-tokens
+            tokens = re.findall(self.gpt2_pattern, text)
+            for token in tokens:
+                token_bytes = list(bytes([x]) for x in token.encode('UTF-8'))
+                # 对于每一个相邻的byte pair在merges中找是否有对应的merge
+                while True:
+                    i = 0
+                    pair_start = -1
+                    min_rank = len(self.merges) + 1
+                    # 遍历一遍找rank最小的match
+                    while i < len(token_bytes) - 1:
+                        pair = (token_bytes[i], token_bytes[i + 1])
+                        if pair in self.merges_rank:
+                            if self.merges_rank[pair] < min_rank:
+                                pair_start = i
+                                min_rank = self.merges_rank[pair]
+                        i += 1
+                    # 合并完成跳出
+                    if pair_start == -1:
+                        break
+                    token_bytes[pair_start] = token_bytes[pair_start] + token_bytes[pair_start + 1]
+                    token_bytes.pop(pair_start+1)
 
-    bpe_tokenizer_worker(input_path, special_tokens, pretrained_tokenization)
-    while len(vocab) < vocab_size:
-        pretrained_tokenization = bpe_tokenizer_merger(vocab, merges, pretrained_tokenization)
-    return vocab, merges
+                # 合并完成后将该token的encoding送进encoded
+                token_encoded = []
+                for word in token_bytes:
+                    token_encoded.append(self.vocab_encoding[word])
+                encoded += token_encoded
+        return encoded
 
+
+    def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
+        # 惰性逐块 encode 并 yield，不得一次性读入全部内容（内存受限测试会检查）
+        for iter in iterable:
+            encoded = self.encode(iter)
+            yield from encoded
+
+
+    def decode(self, ids: list[int]) -> str:
+        # 逐个查 vocab 取 bytes -> 全部拼接 -> 最后一次性 decode(errors="replace")
+        decoded = []
+        for id in ids:
+            decoded.append(self.vocab[id])
+        return b''.join(decoded).decode(errors='replace')
+        
 if __name__ == '__main__':
-    special_tokens = [r'<|endoftext|>', r'<|padding|>']
-    bpe_tokenizer_main('data/toy_corpus.txt', 512, special_tokens)
+    from tests.common import FIXTURES_PATH
+    from tests.test_tokenizer import get_tokenizer_from_vocab_merges_path
+
+    VOCAB_PATH = FIXTURES_PATH / "gpt2_vocab.json"
+    MERGES_PATH = FIXTURES_PATH / "gpt2_merges.txt"
+    tokenizer = get_tokenizer_from_vocab_merges_path(VOCAB_PATH, MERGES_PATH, ['<|endoftext|>'])
+    test_string = "Héllò hôw <|endoftext|><|endoftext|> are ü? 🙃<|endoftext|>"
+    encoded_ids = tokenizer.encode(test_string)
+    tokenized_string = [tokenizer.decode([x]) for x in encoded_ids]
+    decoded_string = tokenizer.decode(encoded_ids)
+
+    import tiktoken
+    reference_tokenizer = tiktoken.get_encoding("gpt2")
+    test_string = "Héllò hôw <|endoftext|><|endoftext|> are ü? 🙃<|endoftext|>"
+
+    reference_ids = reference_tokenizer.encode(test_string, allowed_special={"<|endoftext|>"})
+    ids = tokenizer.encode(test_string)
+
+
+    corpus_path = FIXTURES_PATH / "tinystories_sample.txt"
+    with open(corpus_path) as f:
+        corpus_contents = f.read()
+    reference_ids = reference_tokenizer.encode(corpus_contents, allowed_special={"<|endoftext|>"})
+    all_ids = []
+    with open(FIXTURES_PATH / "tinystories_sample.txt") as f:
+        for _id in tokenizer.encode_iterable(f):
+            all_ids.append(_id)
+
     pass
