@@ -29,7 +29,8 @@ def run_linear(
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
     """
     from cs336_basics.basic_building_blocks import Linear
-    linear = Linear(d_in, d_out, weights)
+    linear = Linear(d_in, d_out)
+    linear.load_state_dict({'W': weights})
     return linear(in_features)
 
 
