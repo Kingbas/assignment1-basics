@@ -110,9 +110,35 @@ class Softmax(torch.nn.Module):
         # 首先把n_dim维的最大值找出来
         x_max = torch.max(x, dim=self.n_dim, keepdim=True).values
         x = x - x_max
-        x_sum = torch.sum(torch.exp(x), dim=self.n_dim, keepdim=True)
-        x = torch.exp(x) / x_sum
+        temp = torch.exp(x)
+        x_sum = torch.sum(temp, dim=self.n_dim, keepdim=True)
+        x = temp/ x_sum
         return x
+
+
+class ScaledDotProductAttention(torch.nn.Module):
+    def __init__(self, Q: Float[Tensor, " ... queries d_k"],
+                        K: Float[Tensor, " ... keys d_k"],
+                        V: Float[Tensor, " ... keys d_v"],
+                        mask: Bool[Tensor, " ... queries keys"]) -> None:
+        super().__init__()
+        self.Q = Q
+        self.K = K
+        self.V = V
+        self.d_k = Q.shape[-1]
+        self.mask = mask
+        # 沿keys轴归一化
+        self.softmax = Softmax(-1)
+    
+    def forward(self):
+        out = einsum(self.Q, self.K, '... queries d_k, ... keys d_k -> ... queries keys')
+        out = out / math.sqrt(self.d_k)
+        # 把mask中的True替换为-torch.inf
+        out = out.masked_fill(~self.mask, -torch.inf)
+        # mask = torch.where(self.mask, 0.0, -torch.inf)
+        out = self.softmax(out)
+        out = einsum(out, self.V, '... queries keys, ... keys d_v -> ... queries d_v')
+        return out
 
 
 if __name__ == '__main__':
