@@ -113,9 +113,11 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    from cs336_basics.basic_building_blocks import ScaledDotProductAttention
+    from cs336_basics.basic_building_blocks import ScaledDotProductAttention, scaledDotProductAttention
     sdpa = ScaledDotProductAttention(Q, K, V, mask)
-    return sdpa()
+    
+    # return sdpa()
+    return scaledDotProductAttention(Q,K,V,mask)
 
 
 def run_multihead_self_attention(
@@ -449,9 +451,8 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    from cs336_basics.basic_building_blocks import Softmax
-    softmax = Softmax(dim)
-    return softmax(in_features)
+    from cs336_basics.basic_building_blocks import softmax
+    return softmax(in_features, dim)
 
 
 def run_cross_entropy(

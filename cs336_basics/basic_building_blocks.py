@@ -101,44 +101,30 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         return x
 
 
-class Softmax(torch.nn.Module):
-    def __init__(self, n_dim) -> None:
-        super().__init__()
-        self.n_dim = n_dim
-
-    def forward(self, x):
-        # 首先把n_dim维的最大值找出来
-        x_max = torch.max(x, dim=self.n_dim, keepdim=True).values
-        x = x - x_max
-        temp = torch.exp(x)
-        x_sum = torch.sum(temp, dim=self.n_dim, keepdim=True)
-        x = temp/ x_sum
-        return x
+def softmax(x, n_dim):
+    # 首先把n_dim维的最大值找出来
+    x_max = torch.max(x, dim=n_dim, keepdim=True).values
+    x = x - x_max
+    temp = torch.exp(x)
+    x_sum = torch.sum(temp, dim=n_dim, keepdim=True)
+    x = temp/ x_sum
+    return x
 
 
-class ScaledDotProductAttention(torch.nn.Module):
-    def __init__(self, Q: Float[Tensor, " ... queries d_k"],
+def scaledDotProductAttention(Q: Float[Tensor, " ... queries d_k"],
                         K: Float[Tensor, " ... keys d_k"],
                         V: Float[Tensor, " ... keys d_v"],
-                        mask: Bool[Tensor, " ... queries keys"]) -> None:
-        super().__init__()
-        self.Q = Q
-        self.K = K
-        self.V = V
-        self.d_k = Q.shape[-1]
-        self.mask = mask
-        # 沿keys轴归一化
-        self.softmax = Softmax(-1)
-    
-    def forward(self):
-        out = einsum(self.Q, self.K, '... queries d_k, ... keys d_k -> ... queries keys')
-        out = out / math.sqrt(self.d_k)
-        # 把mask中的True替换为-torch.inf
-        out = out.masked_fill(~self.mask, -torch.inf)
-        # mask = torch.where(self.mask, 0.0, -torch.inf)
-        out = self.softmax(out)
-        out = einsum(out, self.V, '... queries keys, ... keys d_v -> ... queries d_v')
-        return out
+                        mask: Bool[Tensor, " ... queries keys"] | None = None):
+    d_k = Q.shape[-1]
+    out = einsum(Q, K, '... queries d_k, ... keys d_k -> ... queries keys')
+    out = out / math.sqrt(d_k)
+    # 把mask中的True替换为-torch.inf
+    if mask is not None:
+        out = out.masked_fill(~mask, -torch.inf)
+    # mask = torch.where(self.mask, 0.0, -torch.inf)
+    out = softmax(out, -1)
+    out = einsum(out, V, '... queries keys, ... keys d_v -> ... queries d_v')
+    return out
 
 
 if __name__ == '__main__':
@@ -170,11 +156,6 @@ if __name__ == '__main__':
     # 单独把第 1 个 token 按位置 7 算一次
     y_single = rope(x[:, 1:2], torch.tensor([[7]]))
     assert torch.allclose(y[:, 1], y_single[:, 0], atol=1e-6)
-
-
-    softmax = Softmax(0)
-    x = torch.rand([3,3])
-    softmax(x)
 
     pass
 
