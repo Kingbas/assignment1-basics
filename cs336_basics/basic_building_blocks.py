@@ -44,13 +44,13 @@ class RMSNorm(torch.nn.Module):
 
 
 class SwiGLU(torch.nn.Module):
-    def __init__(self, d_model, d_ff=None, device=None, dtype=None, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, d_model, d_ff=None, device=None, dtype=None) -> None:
+        super().__init__()
         if d_ff is None:
             d_ff = int((8/3 * d_model) // 64 * 64)
-        self.w1 = Linear(d_model, d_ff)
-        self.w2 = Linear(d_ff, d_model)
-        self.w3 = Linear(d_model, d_ff)
+        self.w1 = Linear(d_model, d_ff, device, dtype)
+        self.w2 = Linear(d_ff, d_model, device, dtype)
+        self.w3 = Linear(d_model, d_ff, device, dtype)
 
     def forward(self, x: Float[Tensor, '... d_model']) -> Float[Tensor, '... d_model']:
         # gate
@@ -60,6 +60,44 @@ class SwiGLU(torch.nn.Module):
         x2 = self.w3(x)
         # output
         return self.w2(x1 * x2)
+
+
+class RotaryPositionalEmbedding(torch.nn.Module):
+    def __init__(self, theta: float, d_k: int, max_seq_len: int, device=None):
+        assert d_k % 2 == 0
+        super().__init__()
+        # 对于d_k维度的词嵌入，有k对词嵌入元素，k的取值为0，1，……，d_k/2 - 1，算出来1/theta^(2k/d)
+        # 踩坑：arange intg生成int，linspace生成float
+        k = torch.arange(0, d_k/2, 1) # (d_k/2,)
+        # 对于max_seq_len，期望与k外积生成一个max_seq_len, d_k/2的张量
+        seq = torch.arange(0, max_seq_len, 1)
+        seq = rearrange(seq, 'max_seq_len -> max_seq_len 1')
+        # 算出来对于每一个k的频率，频率i/theta^(2k/d)的shape是(max_seq_len, d_k/2)
+        theta_seq = theta ** (-2*k/d_k)
+        # 先把频率搞定
+        cache = seq * theta_seq # max_seq_len 1 , d_k/2 -> max_seq_len d_k/2
+        # 再搞定对应的sin cos cache，shape是(max_seq_len, d_k/2, 2, 2)
+        cache = torch.stack([torch.cos(cache), -torch.sin(cache), torch.sin(cache), torch.cos(cache)], dim=-1) # (max_seq_len, d_k/2, 4)
+        cache = rearrange(cache, '... (i j) -> ... i j', i=2)
+        # 对于每一个i，有d_k/2对sin cos的缓存,sin cos缓存cache的维度是 d_k/2 2 2
+        self.register_buffer('cache', cache.to(device), persistent=False)
+
+    def forward(self, x: Float[Tensor, " ... sequence_length d_k"], token_positions: Int[Tensor, " ... sequence_length"]) -> Float[Tensor, " ... sequence_length d_k"]:
+        # 对于一个输入为'... seq_len d_k'的tensor，先reshape成'... seq_len d_k/2 2'，对于'... seq'的索引，前者为even项，后者为odd项
+        # 对于论文中的theta_i k，seq_len维度代表position i，k则是d_k中的第几对词嵌入元素
+        # 对于每一个i，有d_k/2对sin cos的缓存,sin cos缓存cache的维度是 d_k/2 2 2
+        # 那么input @ cache.T就是结果，再reshape回... seq_len d_k就可以了
+        
+        #input中tokenpositions代表x中每一个token的position，因此要对每一个position查出来sin cos cache
+        # 先将x拆分成奇偶
+        x = rearrange(x, '... (pairs pair) -> ... pairs pair', pair=2) # ... sequence_length d_k/2 2
+        # 从cache中取出对应position的2*2cache
+        R = self.cache[token_positions] # R维度是 ... sequence_length d_k/2 2 2,[token_positions]消费了cache的一维（左对齐），接着拼接cache剩余维度
+        # x是... sequence_length d_k/2 2，R是... sequence_length d_k/2 2 2
+        # 对于每一个sequence token，对每个pair里面的词嵌入元素，与R中每个sequence token的2 2矩阵相乘，获得旋转后的词嵌入元素
+        x = einsum(x, R, '... sequence_length pairs row, ... sequence_length pairs col row -> ... sequence_length pairs col')
+        x = rearrange(x, '... pairs out -> ... (pairs out)')
+        return x
 
 
 if __name__ == '__main__':
@@ -73,5 +111,23 @@ if __name__ == '__main__':
     swiglu = SwiGLU(d_model)
     print(list(swiglu.state_dict().keys()))
     swiglu(torch.rand([1,64]))
+
+    rope = RotaryPositionalEmbedding(10000.0, d_k=8, max_seq_len=16)
+
+    print(list(rope.state_dict().keys()))          # → []
+    print([n for n, _ in rope.named_buffers()])    # → ['cache']
+    print(rope.cache.shape)                        # → (16, 4, 2, 2)
+    print(rope.cache[0])                           # → 4 个单位矩阵
+    print(rope.cache[5, 0])
+    # → [[ 0.2837,  0.9589],
+    #    [-0.9589,  0.2837]]
+
+    x = torch.rand(1, 3, 8)
+    pos = torch.tensor([[3, 7, 1]])          # 故意乱序、不从 0 开始
+    y = rope(x, pos)
+
+    # 单独把第 1 个 token 按位置 7 算一次
+    y_single = rope(x[:, 1:2], torch.tensor([[7]]))
+    assert torch.allclose(y[:, 1], y_single[:, 0], atol=1e-6)
     pass
 
