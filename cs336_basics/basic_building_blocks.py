@@ -95,7 +95,8 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         R = self.cache[token_positions] # R维度是 ... sequence_length d_k/2 2 2,[token_positions]消费了cache的一维（左对齐），接着拼接cache剩余维度
         # x是... sequence_length d_k/2 2，R是... sequence_length d_k/2 2 2
         # 对于每一个sequence token，对每个pair里面的词嵌入元素，与R中每个sequence token的2 2矩阵相乘，获得旋转后的词嵌入元素
-        x = einsum(x, R, '... sequence_length pairs row, ... sequence_length pairs col row -> ... sequence_length pairs col')
+        # x = einsum(x, R, '... sequence_length pairs row, ... sequence_length pairs col row -> ... sequence_length pairs col')
+        x = einsum(x, R, '...  pairs row, ...  pairs col row -> ...  pairs col') # alternative impl of the einsum above
         x = rearrange(x, '... pairs out -> ... (pairs out)')
         return x
 
