@@ -101,6 +101,20 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         return x
 
 
+class Softmax(torch.nn.Module):
+    def __init__(self, n_dim) -> None:
+        super().__init__()
+        self.n_dim = n_dim
+
+    def forward(self, x):
+        # 首先把n_dim维的最大值找出来
+        x_max = torch.max(x, dim=self.n_dim, keepdim=True).values
+        x = x - x_max
+        x_sum = torch.sum(torch.exp(x), dim=self.n_dim, keepdim=True)
+        x = torch.exp(x) / x_sum
+        return x
+
+
 if __name__ == '__main__':
     l = Linear(3, 1)
     x = torch.rand([3,3])
@@ -130,5 +144,11 @@ if __name__ == '__main__':
     # 单独把第 1 个 token 按位置 7 算一次
     y_single = rope(x[:, 1:2], torch.tensor([[7]]))
     assert torch.allclose(y[:, 1], y_single[:, 0], atol=1e-6)
+
+
+    softmax = Softmax(0)
+    x = torch.rand([3,3])
+    softmax(x)
+
     pass
 
