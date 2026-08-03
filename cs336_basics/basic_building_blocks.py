@@ -118,13 +118,47 @@ def scaledDotProductAttention(Q: Float[Tensor, " ... queries d_k"],
     d_k = Q.shape[-1]
     out = einsum(Q, K, '... queries d_k, ... keys d_k -> ... queries keys')
     out = out / math.sqrt(d_k)
-    # 把mask中的True替换为-torch.inf
+    # 把mask中的False替换为-torch.inf
     if mask is not None:
         out = out.masked_fill(~mask, -torch.inf)
     # mask = torch.where(self.mask, 0.0, -torch.inf)
     out = softmax(out, -1)
     out = einsum(out, V, '... queries keys, ... keys d_v -> ... queries d_v')
     return out
+
+
+class CasualMultiHeadSelfAttention(torch.nn.Module):
+    '''
+        不带rope的
+    '''
+    def __init__(self, d_model:int, num_heads:int, device=None, dtype=None) -> None:
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.device = device
+        self.dtype = dtype
+        self.d_head = int(d_model / num_heads)
+        self.q_proj = Linear(d_model, d_model, device, dtype)
+        self.k_proj = Linear(d_model, d_model, device, dtype)
+        self.v_proj = Linear(d_model, d_model, device, dtype)
+        self.output_proj = Linear(d_model, d_model, device, dtype)
+
+
+    def forward(self, x: Float[Tensor, '... seq d_model']):
+        x = x.to(self.device)
+        Q = self.q_proj(x) # ... seq d_model
+        Q = rearrange(Q, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
+        K = self.k_proj(x) # ... seq d_model
+        K = rearrange(K, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
+        V = self.v_proj(x)
+        V = rearrange(V, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
+        seq = Q.shape[-2]
+        mask = torch.tril(torch.ones(seq, seq, dtype=torch.bool)).to(self.device)
+        # scores = einsum(Q, K, '... h seq_q d_head, ... h seq_k d_head -> ... seq_q seq_k')
+        # scores = scores.masked_fill(~mask, -torch.inf)
+        scores = scaledDotProductAttention(Q, K ,V, mask) # ... h seq_q d_head
+        scores = rearrange(scores, '... h seq_q d_head -> ... seq_q (h d_head)')
+        return self.output_proj(scores)
+
 
 
 if __name__ == '__main__':
