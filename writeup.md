@@ -459,3 +459,71 @@ assert torch.allclose(x.norm(dim=-1), y.norm(dim=-1), atol=1e-5)   # 旋转保�
 - **`d_ff = 8/3 · d_model` 的来由**:传统 FFN 参数量 `2·d·4d = 8d²`;SwiGLU 三个矩阵 `3·d·d_ff = 8d²` → `d_ff = 8d/3`。取整到 64 倍数是为对齐 tensor core
 - **theta 的直觉**:k=0 频率 1,转得最快,编码紧邻;k=d/2-1 频率约 1/Θ,转得极慢,编码长程。一组不同尺度的旋转同时编码远近距离(同傅里叶展开思想)。**调大 theta → 最慢的平面更慢 → 能表达更长距离,这是 NTK scaling 的核心**
 - **指数除以 `d` 是归一化**:让频率范围恒为 `[1, 1/Θ]`,与 `d_k` 解耦,改模型宽度时位置编码的"尺度感"不漂移
+
+### 十、Attention 阶段(softmax / SDPA / MHA)
+
+#### einsum 静默错误(同一类根因,又踩了几次)
+
+| 错误 | 后果 | 怎么早发现 |
+|---|---|---|
+| `'... q d, ... k d -> q k'` 输出漏 `...` | batch/head 被**求和**成一张图,再靠下一步广播回去,形状居然对 | batch 独立性检查;同函数内两个 einsum 一个有 `...` 一个没有 = 信号 |
+| `'... seq d, ... seq d -> ... seq seq'` q/k 轴同名 | 同名=同轴,输出重复标识符,直接报错 | 语义不同的轴必须不同名(`queries`/`keys`),即使长度相等 |
+| 轴名撒谎:拆完 head 还叫 `d_model` | 不报错,但误导后续 | 名字要反映**当前**含义(拆后是 `d_head`) |
+
+**数轴自检**:每个操作数 `命名轴个数 + ...覆盖数 = ndim`。反过来用:想让 `...` 吃几根,剩下的必须恰好是命名的那几根。
+
+**通用读法**:einsum 报"某下标两处尺寸不一致",几乎总是**形状定义反了或接错层**,先查形状不要改 pattern。(SwiGLU 参数顺序、RoPE-MHA 的 `d_k` 都是这么被抓到的)
+
+#### softmax
+
+- **分子分母必须用同一个移位后的张量**:分子减了 max、分母没减 → 结果整体差一个 `e^{-max}` 因子。诊断法:每行比值是常数 → 分母错;`ln(因子)` ≈ 每行最大值即可确认
+- **平移不变性**是最强自查:`softmax(x) == softmax(x + 100)`,不依赖参考答案,且能同时抓住"没减 max"
+- **`dim` 是运行时整数 → 不能用 einops**(pattern 是静态字符串)。这是 einops **不适用**的典型场景,必须用 torch 的 `dim=` 风格
+- `torch.max(x, dim=...)` 返回 **namedtuple**,要 `.values`,或直接用 `torch.amax`
+- 别 `torch.exp(x)` 算两遍(分子分母),存下来复用 —— 分数矩阵是 `seq²` 量级
+
+#### mask
+
+- **涉及 inf 永远用 `where`/`masked_fill`,不用算术**:`0 * inf = nan` 是定时炸弹
+- `masked_fill` **不是原地**,必须接回来(`masked_fill_` 才是原地)—— 这是"返回张量的独立一行没接收 = bug"规律的第三次出现
+- 屏蔽位置填 **`-inf` 不是 0**:`exp(-inf)=0` 权重才真的为 0;填 0 得到 `exp(0)=1` 反而有权重
+- mask 必须加在 **softmax 之前、缩放之后**
+- `~` 只对 bool/整型有效;对 float 是按位取反给乱码。务必让 mask 生成时就是 bool
+- **整行全屏蔽 → softmax 分母 0 → nan**(causal 下不会,padding mask 下会;届时用 `torch.finfo(dtype).min` 代替 `-inf`)
+
+#### causal mask
+
+- **方向**:`key 下标 j ≤ query 下标 i`(只能看自己和过去),下三角含对角线为"保留"。记反了(`i ≤ j`)= 只能看未来 = 训练时抄答案,loss 异常低但生成全是垃圾
+- **对角线必须包含**:漏了 → 位置 0 无 key 可看 → 整行 `-inf` → nan
+- **一横一竖广播**:`i[:,None]`(query 竖)`<= j[None,:]`(key 横)。方向对调得到转置 = 反因果。记语义(query 是行)不记符号
+- **`device=x.device`**、**不要 expand 到 batch/head**(靠广播)、**别注册成 persistent buffer**(否则 load_state_dict 报 missing key)
+- 自查:`mask.sum(-1) == [1,2,3,...,seq]`,一个向量区分方向错(得递减)和漏对角线(得 `[0,1,2,...]`)
+
+#### MHA / 多头
+
+- **沿 feature 维(-1)切 head,不沿 seq**;`-1` 是行向量布局的结论不是原因。feature 从头到尾在最后一维,**唯一例外是 scores(最后两维都是位置)**
+- **`h` 必须排在 `seq` 前面**:`(..., h, seq, d_head)`,让 `...` 把 `h` 当 batch 吃掉 → 每个 head 自动独立,SDPA 一行不用改。停在 `(..., seq, h, d_head)` 会把 h 当 queries 轴
+- **拆分顺序 `(h d)` vs `(d h)`**:权重按行连续分块 = `(h d)`(h 慢变)。拆错形状仍合法、数值错、无报错 —— 和 RoPE 的"相邻/对半配对"同类。合回来的 pattern 必须是拆的严格反写
+- **复用 `Linear` 别手写 einsum**:属性名 `q_proj/k_proj/v_proj/output_proj` + 内部 `weight` → 自动拼出 `attn.q_proj.weight`,`load_state_dict` 一次装完。手写 einsum 只得到两段 key
+- **`self.heads` 存成了 `d_head` 却当 `num_heads` 传给 rearrange 的 `h`** = 真 bug(拆成了 16 个 4 维头而非 4 个 16 维头),形状合法数值错。命名要诚实
+- **RoPE 的 `d_k` = `d_model // num_heads`(d_head)不是 d_model**;RoPE 在拆 head **之后**、SDPA **之前**、只作用 Q/K。建 cache 时传错 d_model 会报 `subscript size 32 does not broadcast with 8`
+- **`d_model // num_heads` 用 `//`**:`/` 得 float,当 rearrange kwarg / reshape 尺寸会报错
+- **缩放用 `√d_head` 不是 `√d_model`**(差 `√h` 倍):从 `Q.shape[-1]` 取、且在拆 head 之后调 SDPA,天然正确
+
+#### device 反模式
+
+- **不要 `self.device = device` + forward 里 `x.to(self.device)`**:方向反了(应让参数跟数据走,`Linear` 权重已带 device);`device=None` 时 `x.to(None)` 靠巧合是无操作;mask 应 `device=x.device` 而非 `self.device`
+
+#### 设计
+
+- **无状态操作(SDPA/softmax)写成函数不写成 Module**:无 Parameter/buffer 时 Module 只是空壳,还会污染 state_dict 层级。期望的 9 个 key 里 `attn` 下只有 4 个 proj,本身就说明 SDPA/softmax 不是子模块
+- **数据(Q/K/V)放 forward 局部变量,不放 `__init__`/`self`**:放 self 会导致 forward 无入参、每批新建对象、且普通张量属性不被 `.to()` 搬走
+- **RoPE 开关用 `self.rope = None` 不用新类/继承**:两版本只差"拆 head 后 Q/K 过不过 RoPE"一处,抽两个类=几十行重复;RoPE 在中间,继承没法 `super().forward()` 复用。YAGNI,别为假想需求造抽象基类
+
+#### 贯穿性洞察
+
+- **整个 Transformer 只有 attention 跨位置混合信息**(Linear/Embedding/RMSNorm/SwiGLU/RoPE 全是逐位置独立)。所以因果性只需在 attention 一处保证,一个 causal mask 就够
+- **`softmax(ΣQK) ≠ Σsoftmax(QK)`**:单头分数 = 所有 head 分数之和;因 softmax 非线性,多头 ≠ 单头。`(QKᵀ)V` 纯线性会退化成一个线性层,softmax 是 attention 唯一非线性来源,不能省
+- **多头是免费的结构收益**:参数量/FLOPs 与单头几乎相同(`d_head = d_model/h`),换来 `h` 张独立注意力图;唯一代价是 scores 显存 ×h、每头表示宽度降到 d_head(太小成瓶颈,故 64/128 经验值)
+- **验证"reshape 不是没用"**:同权重同输入只改 `num_heads`(1 vs 4),输出**不同** —— 证明"在哪切开、哪些项相加"这个结构假设才是起作用的东西
+- **`d_k`/`d_v` 分开命名有意义**:V 不参与点积,`d_v` 可以 ≠ `d_k`(T5 就是);attention 硬约束只有两条(q/k 输出维相等、`W_o` 输出 = d_model),其余维度都自由
