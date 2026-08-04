@@ -128,16 +128,11 @@ def scaledDotProductAttention(Q: Float[Tensor, " ... queries d_k"],
     return out
 
 
-class CasualMultiHeadSelfAttention(torch.nn.Module):
-    '''
-        不带rope的
-    '''
-    def __init__(self, d_model:int, num_heads:int, theta:int = None, max_seq_len:int = None, device=None, dtype=None) -> None:
+class CausalMultiHeadSelfAttention(torch.nn.Module):
+    def __init__(self, d_model:int, num_heads:int, theta:float | None = None, max_seq_len:int | None = None, device=None, dtype=None) -> None:
         super().__init__()
         assert d_model % num_heads == 0
-        self.device = device
-        self.dtype = dtype
-        self.d_head = int(d_model / num_heads)
+        self.d_head = int(d_model // num_heads)
         self.q_proj = Linear(d_model, d_model, device, dtype)
         self.k_proj = Linear(d_model, d_model, device, dtype)
         self.v_proj = Linear(d_model, d_model, device, dtype)
@@ -148,26 +143,49 @@ class CasualMultiHeadSelfAttention(torch.nn.Module):
             self.rope = None
 
 
-    def forward(self, x: Float[Tensor, '... seq d_model'], token_positions:Int[Tensor, " ... sequence_length"] = None):
-        x = x.to(self.device)
+    def forward(self, x: Float[Tensor, '... seq d_model'], token_positions:Int[Tensor, " ... sequence_length"] | None = None):
+        if token_positions is None:
+            token_positions = torch.arange(x.shape[-2], device=x.device, dtype=torch.int)
+        token_positions = rearrange(token_positions, '... seq -> ... 1 seq')
         Q = self.q_proj(x) # ... seq d_model
         Q = rearrange(Q, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
         K = self.k_proj(x) # ... seq d_model
         K = rearrange(K, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
         if self.rope is not None:
-            assert token_positions is not None
             Q = self.rope(Q, token_positions)
             K = self.rope(K, token_positions)
         V = self.v_proj(x)
         V = rearrange(V, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
         seq = Q.shape[-2]
-        mask = torch.tril(torch.ones(seq, seq, dtype=torch.bool)).to(self.device)
-        # scores = einsum(Q, K, '... h seq_q d_head, ... h seq_k d_head -> ... seq_q seq_k')
-        # scores = scores.masked_fill(~mask, -torch.inf)
+        mask = torch.tril(torch.ones(seq, seq, dtype=torch.bool)).to(x.device)
         scores = scaledDotProductAttention(Q, K ,V, mask) # ... h seq_q d_head
         scores = rearrange(scores, '... h seq_q d_head -> ... seq_q (h d_head)')
         return self.output_proj(scores)
 
+
+class TransformerBlock(torch.nn.Module):
+    def __init__(self, d_model: int,
+                    num_heads: int,
+                    d_ff: int,
+                    max_seq_len: int,
+                    theta: float,
+                    device=None,
+                    dtype=None) -> None:
+        super().__init__()
+        self.ln1 = RMSNorm(d_model, device=device, dtype=dtype)
+        self.attn = CausalMultiHeadSelfAttention(d_model, num_heads, theta, max_seq_len, device, dtype)
+        self.ffn = SwiGLU(d_model, d_ff, device, dtype)
+        self.ln2 = RMSNorm(d_model, device=device, dtype=dtype)
+
+    def forward(self, x, token_positions=None):
+        residual = x
+        x = self.ln1(x)
+        x = self.attn(x, token_positions)
+        x = residual + x
+        residual = x
+        x = self.ln2(x)
+        x = self.ffn(x)
+        return residual + x
 
 
 if __name__ == '__main__':
@@ -199,6 +217,5 @@ if __name__ == '__main__':
     # 单独把第 1 个 token 按位置 7 算一次
     y_single = rope(x[:, 1:2], torch.tensor([[7]]))
     assert torch.allclose(y[:, 1], y_single[:, 0], atol=1e-6)
-
+    
     pass
-

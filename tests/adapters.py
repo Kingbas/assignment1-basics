@@ -151,8 +151,8 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    from cs336_basics.basic_building_blocks import CasualMultiHeadSelfAttention
-    mha = CasualMultiHeadSelfAttention(d_model, num_heads)
+    from cs336_basics.basic_building_blocks import CausalMultiHeadSelfAttention
+    mha = CausalMultiHeadSelfAttention(d_model, num_heads)
     mha.load_state_dict(
         {
             'q_proj.weight': q_proj_weight,
@@ -201,8 +201,8 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_model"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    from cs336_basics.basic_building_blocks import CasualMultiHeadSelfAttention
-    mha = CasualMultiHeadSelfAttention(d_model, num_heads, theta, max_seq_len)
+    from cs336_basics.basic_building_blocks import CausalMultiHeadSelfAttention
+    mha = CausalMultiHeadSelfAttention(d_model, num_heads, theta, max_seq_len)
     mha.load_state_dict(
         {
             'q_proj.weight': q_proj_weight,
@@ -309,7 +309,11 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    from cs336_basics.basic_building_blocks import TransformerBlock
+    transformer = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+    transformer.load_state_dict(weights)
+
+    return transformer(in_features)
 
 
 def run_transformer_lm(
