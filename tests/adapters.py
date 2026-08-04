@@ -113,10 +113,7 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    from cs336_basics.basic_building_blocks import ScaledDotProductAttention, scaledDotProductAttention
-    sdpa = ScaledDotProductAttention(Q, K, V, mask)
-    
-    # return sdpa()
+    from cs336_basics.basic_building_blocks import scaledDotProductAttention
     return scaledDotProductAttention(Q,K,V,mask)
 
 
@@ -395,7 +392,10 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    from cs336_basics.basic_building_blocks import TransformerLM
+    transformer = TransformerLM(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, rope_theta)
+    transformer.load_state_dict(weights)
+    return transformer(in_indices)
 
 
 def run_rmsnorm(

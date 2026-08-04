@@ -527,3 +527,124 @@ assert torch.allclose(x.norm(dim=-1), y.norm(dim=-1), atol=1e-5)   # 旋转保�
 - **多头是免费的结构收益**:参数量/FLOPs 与单头几乎相同(`d_head = d_model/h`),换来 `h` 张独立注意力图;唯一代价是 scores 显存 ×h、每头表示宽度降到 d_head(太小成瓶颈,故 64/128 经验值)
 - **验证"reshape 不是没用"**:同权重同输入只改 `num_heads`(1 vs 4),输出**不同** —— 证明"在哪切开、哪些项相加"这个结构假设才是起作用的东西
 - **`d_k`/`d_v` 分开命名有意义**:V 不参与点积,`d_v` 可以 ≠ `d_k`(T5 就是);attention 硬约束只有两条(q/k 输出维相等、`W_o` 输出 = d_model),其余维度都自由
+
+#### 长度类参数的三个层级
+
+容易混成一团,实际上是三个不同层级的东西:
+
+| 量 | 是什么 | 由谁定 | 代码里的体现 |
+|---|---|---|---|
+| `context_length` | **模型规格**:一次最多能处理多少 token | 超参 | `__init__` 参数,往下传 |
+| `max_seq_len` | **实现细节**:RoPE 预计算了多少个位置 | 由 context_length 推出 | `cache` 的第 0 维 |
+| `sequence_length` | **运行时实际长度** | 输入张量 | `x.shape[-2]` |
+
+约束:`sequence_length ≤ context_length`,且**用到的位置下标必须 < max_seq_len**(否则 `cache[token_positions]` 索引越界)。这个作业里三者数值上相等,但职责不同。
+
+- **mask 必须用运行时 `seq` 不是 `max_seq_len`**:否则 `(max, max)` 和分数矩阵 `(..., seq, seq)` 对不上。真实实现常见"建 `max` 大小的 buffer + forward 里切 `[:seq,:seq]`",那是为了省重复构造
+- **`seq <= context_length` 值得加 assert**:否则只会得到 `cache[...]` 一个难懂的索引越界错
+- **一个来源往下传**,别在每层各存一份再自己算 —— 避免两处不一致
+- **RoPE 下 `context_length` 是软限制,学习式位置编码下是硬限制**:RoPE 无可学习位置参数(key 清单里只有 `token_embeddings.weight`,**没有 `position_embeddings.weight`**),改 `max_seq_len` 只是重算 cache、不动任何参数 —— 这就是长度外推/NTK scaling 可行的基础。而学习式绝对位置编码(原版 BERT/GPT-2)直接决定一张 `(context_length, d_model)` **参数表**的大小,想变长只能重训
+
+### 十一、TransformerBlock 与 TransformerLM(组装阶段)
+
+这两层几乎不含新算法,全是**接线**。但踩的坑和前面几节性质不同:前面是"算错了",这里是"接错了"。
+
+#### 组装层的共同特征
+
+- **自己不持有任何参数**:TransformerBlock 只有 `attn`/`ln1`/`ln2`/`ffn` 四个子模块,TransformerLM 只有 `token_embeddings`/`layers`/`ln_final`/`lm_head`。一旦发现自己在组装层里写 `nn.Parameter`,多半是理解错了
+- **属性名 = state_dict 前缀**,递归拼接。`self.attn = MHA(...)` 且 MHA 内 `self.q_proj = Linear(...)` → `attn.q_proj.weight`。**两层属性名都对,`load_state_dict(strict=True)` 一次装完九个 key**,这是前面几节坚持命名规范的全部回报
+- **先打印 key 再写 forward**:`print(list(m.state_dict().keys()))` 对着 adapter 文档里的清单逐条核对。10 秒,能省掉一整轮调试
+
+#### pre-norm 的接线
+
+正确形式是 `x + Sublayer(Norm(x))` —— **norm 在子层之前**,残差从 norm **之前**分叉。
+
+踩的坑:第一个子层写对了(`ln1` 在 `attn` 前),第二个却把 `ln2` 放到了 `ffn` **后面**。原因是 forward 里 `x` 被反复重绑定,视觉上难以核对。
+
+- **对策**:写完把每一行的语义读一遍(`residual = ?` / `x = ?`),或者干脆用不同变量名,别都叫 `x`
+- 这是**会挂测试但不报错**的错误,静态阅读容易漏
+- pre-norm vs post-norm 不是风格问题:post-norm 深层需要 learning-rate warmup 才能稳定,pre-norm 不需要 —— 这是现代 LLM 普遍用 pre-norm 的原因
+
+#### `token_positions` 的责任归属
+
+`run_transformer_block` 的签名**没有** `token_positions` 参数 → 默认情况必须能自动工作 → **MHA 必须在 `None` 时自造 `arange(seq)`**。
+
+而 `_with_rope` 的 adapter 会显式传 `(batch, seq)` → 两条路都要通。
+
+- **踩的坑**:一开始在 MHA 里写了 `assert token_positions is not None`,而 TransformerBlock 的 `theta`/`max_seq_len` 是必填 → `self.rope` 永远存在 → assert 必然触发
+- **判断依据**:看 adapter 签名有没有那个参数,就知道"谁该负责兜底"
+
+#### head 轴错位:被 size-1 广播掩盖的 bug ⭐
+
+RoPE 在拆 head **之后**调用,此时:
+
+```
+Q                (batch, h, seq, d_head)     → einsum 的 ... = (batch, h, seq)
+token_positions  (batch,    seq)             → R 的 ...      = (batch, seq)
+                        右对齐 ↓
+                 batch 撞上了 h
+```
+
+后果分两种:`batch != h` 报 `does not broadcast`;**`batch == h` 静默算错**(每个 head 拿到错误 batch 的位置编码)。
+
+- **修法**:在 MHA 里把位置张量变成 `(batch, 1, seq)`(倒数第二维插 1)。**不要改 RoPE** —— head 轴是 MHA 引入的复杂度,该由 MHA 消化
+- **统一两条路的技巧**:不管传进来几维,一律在倒数第二维插 1。`(seq,)` → `(1, seq)`(无害),`(batch, seq)` → `(batch, 1, seq)`(正是所需),不用分支
+- **⚠️ 最值得记的一点:测试通过了,但没验证这个修复**。fixture 里 `token_positions` 是 `(1, 12)`,batch 维恰好是 1,size-1 广播让「插不插轴」结果相同。**"绿了"不等于"那个 bug 不存在"**
+- **真正能验证的检查**:构造 `batch == num_heads`(如 4 和 4)、显式传 `(4, seq)` 位置,做 batch 独立性检查(整批喂 vs 逐样本喂再拼,必须逐位相同)。注释掉插轴那行应该挂,加回来应该过 —— **能区分对错的检查,才是有价值的检查**
+
+#### Embedding 不是 Linear
+
+`self.token_embeddings = Linear(d_model, vocab_size)` —— 复制粘贴 `lm_head` 那行忘了改。
+
+| | 输入 | 操作 | 权重形状 | 构造参数顺序 |
+|---|---|---|---|---|
+| `Linear` | float `(..., d_in)` | 矩阵乘(收缩 d_in) | `(d_out, d_in)` | `(in, out)` |
+| `Embedding` | **int** `(...)` | **查表**(索引) | `(vocab_size, d_model)` | `(vocab_size, d_model)` |
+
+- **`Embedding` 是唯一增加维数的模块**:`(batch, seq)` 进,`(batch, seq, d_model)` 出 —— 因为它把一个整数换成一个向量
+- **两者的构造参数顺序相反**(`Linear` 是 in 在前,`Embedding` 是 vocab 在前),而且 `lm_head` 和 `token_embeddings` 的权重形状**都是 `(vocab_size, d_model)`** —— 形状检查抓不住把 Embedding 写成 Linear
+- **报错读法**:traceback 显示 `token_embeddings(x)` 掉进了 `Linear.forward`,这一条就定案了。**看 traceback 掉进了哪个类,比看报错信息本身更快**
+
+#### 模型输出 logits,不输出概率
+
+在 `lm_head` 之后多做了一次 `softmax` → 100% 元素不匹配。
+
+**为什么 softmax 不属于模型**:
+
+1. **契约**:snapshot 存的是 logits;`F.cross_entropy` 也接受 logits 而非概率,整个生态约定如此
+2. **下游需求各不相同**:训练要 `log_softmax`、采样要 `softmax(logits/T)` + top-k/top-p、预测只要 `argmax`(softmax 严格单调,不改排序,**对 argmax 纯属浪费**)。提前归一化等于替所有下游做了决定,且丢掉了调温度的能力
+3. **数值有害** ⭐:`log(softmax(x))` 里的 `exp` 会永久销毁信息。logit 比最大值低 20 时,fp16 下 `exp(-20)` 直接下溢为 0 → `log(0) = -inf` → loss `inf` → 梯度 NaN。而 `log_softmax` 用 `log p_i = (x_i - m) - log Σ e^{x_j - m}`,代数上化简掉了 exp,结果就是个普通的 `-20`
+4. **梯度**:softmax+CE 融合后梯度是 `p - y` 一个减法;拆开则要走 softmax 的完整雅可比 `diag(p) - ppᵀ`
+
+一句话:**softmax 属于损失函数或采样器,不属于模型。**
+
+#### 诊断手法:同行内比值 ⭐
+
+第二次用这招定位问题了(第一次是 softmax 分母没减 max)。
+
+**规律**:`Mismatched elements: 100%` 但 ACTUAL 和 DESIRED 之间存在**简洁函数关系**时,说明主体计算是对的,只是最后套了一层(或漏了一层)变换。
+
+步骤:
+
+1. **看取值范围**:全正且 <1 → 概率;有正有负、量级几 → logits;行和为 1 → 确定过了 softmax
+2. **算同行两元素比值**,和 DESIRED 之差取 `exp` 对比
+3. 相等 → 就是多/少了一个 softmax
+
+本次实例:`8.76e-3 / 1.4957e-5 = 585.7`,而 `e^{3.587 - (-2.786)} = 585.6` —— 精确相等,证明 embedding、所有 block、RoPE、causal mask、`ln_final`、`lm_head` **全部正确**,唯一多余的就是最后那个 softmax。
+
+**比逐层排查快得多。**
+
+#### 小的
+
+- **`nn.ModuleList` 比 `nn.Sequential` 贴切**:key 完全相同(`layers.0.attn...`),但 `Sequential` 承诺"依次调用且单输入单输出",而组装层是手写循环。将来 block 需要多参数(如 `token_positions`)时 `Sequential` 就用不了
+- **调试用的 `print` 不要留在库代码里**,想看 key 就在 `__main__` 里打
+- **`Linear` 权重是 `(out, in)` 但构造参数是 `(in, out)`** —— 两个顺序相反,最容易错。`Linear(3, 5).weight.shape` 应是 `(5, 3)`,一行确认,以后不用怀疑
+- **死字段要删**:`self.device`/`self.dtype` 在删掉 `x.to(self.device)` 之后就无人使用了,留着只会误用
+- **变量名要诚实**:`scores = scaledDotProductAttention(...)` 存的是加权后的 V 不是分数;`self.heads` 存的是 `d_head` 不是头数(后者是真 bug)
+
+#### 组装阶段的推进顺序
+
+1. **底下全绿再往上盖**:`test_linear` / `test_embedding` / `test_rmsnorm` / `test_swiglu` / `test_multihead_self_attention{,_with_rope}` 有一个挂着,上层测试的失败原因就会混成一团
+2. `print(state_dict().keys())` 对照 adapter 的 key 清单
+3. `load_state_dict(strict=True)` —— **绝不设 `strict=False`**,它会静默跳过不匹配的 key,权重根本没装进去却毫无提示
+4. 跑测试
