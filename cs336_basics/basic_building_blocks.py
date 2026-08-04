@@ -82,7 +82,7 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         # 先把频率搞定
         cache = seq * theta_seq # max_seq_len 1 , d_k/2 -> max_seq_len d_k/2
         # 再搞定对应的sin cos cache，shape是(max_seq_len, d_k/2, 2, 2)
-        cache = torch.stack([torch.cos(cache), -torch.sin(cache), torch.sin(cache), torch.cos(cache)], dim=-1) # (max_seq_len, d_k/2, 4)
+        cache = torch.stack([torch.cos(cache), -torch.sin(cache), torch.sin(cache), torch.cos(cache)], dim=-1) # (max_seq_len, d_k/2) * 4 -stack> (max_seq_len, d_k/2, 4)
         cache = rearrange(cache, '... (i j) -> ... i j', i=2)
         # 对于每一个i，有d_k/2对sin cos的缓存,sin cos缓存cache的维度是 d_k/2 2 2
         self.register_buffer('cache', cache.to(device), persistent=False)
@@ -121,15 +121,15 @@ def scaledDotProductAttention(Q: Float[Tensor, " ... queries d_k"],
                         V: Float[Tensor, " ... keys d_v"],
                         mask: Bool[Tensor, " ... queries keys"] | None = None):
     d_k = Q.shape[-1]
-    out = einsum(Q, K, '... queries d_k, ... keys d_k -> ... queries keys')
-    out = out / math.sqrt(d_k)
+    scores = einsum(Q, K, '... queries d_k, ... keys d_k -> ... queries keys')
+    scores = scores / math.sqrt(d_k)
     # 把mask中的False替换为-torch.inf
     if mask is not None:
-        out = out.masked_fill(~mask, -torch.inf)
+        scores = scores.masked_fill(~mask, -torch.inf)
     # mask = torch.where(self.mask, 0.0, -torch.inf)
-    out = softmax(out, -1)
-    out = einsum(out, V, '... queries keys, ... keys d_v -> ... queries d_v')
-    return out
+    scores = softmax(scores, -1)
+    scores = einsum(scores, V, '... queries keys, ... keys d_v -> ... queries d_v')
+    return scores
 
 
 class CausalMultiHeadSelfAttention(torch.nn.Module):
@@ -207,6 +207,15 @@ class TransformerLM(torch.nn.Module):
             self.layers.append(TransformerBlock(d_model, num_heads, d_ff, context_length, rope_theta))
         self.ln_final = RMSNorm(d_model)
         self.lm_head = Linear(d_model, vocab_size)
+        # 计算可学习参数量
+        # vocab_size:  50,257
+        # context_length:  1,024
+        # num_layers:  48
+        # d_model:  1,600
+        # num_heads:  25
+        # d_ff:  4,288
+        # result: 1640452800
+        # print(sum(p.numel() for p in self.parameters()))
         
     
     def forward(self, x):
@@ -248,4 +257,14 @@ if __name__ == '__main__':
     y_single = rope(x[:, 1:2], torch.tensor([[7]]))
     assert torch.allclose(y[:, 1], y_single[:, 0], atol=1e-6)
     
+
+    vocab_size=  50257
+    context_length= 1024
+    num_layers= 48
+    d_model= 1600
+    num_heads= 25
+    d_ff= 4288
+    lm = TransformerLM(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, 10000)
+    # 还真是1640452800
+
     pass

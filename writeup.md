@@ -167,13 +167,129 @@ max() 空集合崩:语料 merge 榨干时 pair_count 为空 → 要加"无 pair 
 
 答:
 
+**GPT-2 XL 配置**
+
+| 超参 | 值 |
+|---|---|
+| `vocab_size` | 50,257 |
+| `context_length` | 1,024 |
+| `num_layers` | 48 |
+| `d_model` | 1,600 |
+| `num_heads` | 25 |
+| `d_head` = `d_model / num_heads` | 64 |
+| `d_ff` | 4,288(8/3 × 1600 向上取到 64 的最近倍数) |
+
+**参数清单**
+
+| 层级 | 模块 | 单个形状 | 个数 | 小计 |
+|---|---|---|---|---|
+| 模型级 | `token_embeddings.weight` | `vocab_size × d_model` | 1 | `vocab_size · d_model` |
+| 每 block | `ln1.weight` | `d_model` | 1 | `d_model` |
+| 每 block | `attn` 的 q / k / v / output_proj | `d_model × d_model` | 4 | `4 · d_model²` |
+| 每 block | `ffn` 的 w1 / w3 | `d_ff × d_model` | 2 | `2 · d_model · d_ff` |
+| 每 block | `ffn` 的 w2 | `d_model × d_ff` | 1 | `d_model · d_ff` |
+| 每 block | `ln2.weight` | `d_model` | 1 | `d_model` |
+| 模型级 | `ln_final.weight` | `d_model` | 1 | `d_model` |
+| 模型级 | `lm_head.weight` | `vocab_size × d_model` | 1 | `vocab_size · d_model` |
+
+注:q / k / v 的权重本是每个 head 一份 `d_head × d_model`，`num_heads` 份竖着摞起来正好是 `d_model × d_model`，所以参数量与 `num_heads` 无关。
+
+RoPE 无可学习参数(cache 是 buffer),不计入。所有 `Linear` 无 bias。
+
+**求和**
+
+```
+params_per_block = 2·d_model + 4·d_model² + 3·d_model·d_ff
+
+N = 2·vocab_size·d_model + d_model + num_layers · params_per_block
+
+代入 = 2×50257×1600 + 1600 + 48×(2×1600 + 4×1600² + 3×1600×4288)
+     = 160,822,400 + 1,600 + 48 × 30,825,600
+     = 1,640,452,800
+
+memory = 4 · N  bytes(fp32)
+```
+
+**结果**
+
+| 项 | 代数 | 值 |
+|---|---|---|
+| 可训练参数量 | `2·vocab_size·d_model + d_model + num_layers·(2·d_model + 4·d_model² + 3·d_model·d_ff)` | **1,640,452,800 ≈ 1.64 B** |
+| 单精度(fp32)每参数 | — | 32 bit = 4 B |
+| 加载所需内存 | `4·N` | 6,561,811,200 B = **6.11 GiB**(= 6.56 GB) |
+
+此处仅指加载参数本身,不含梯度、优化器状态与激活值。
+
+
 **(b) 前向传播需要的矩阵乘及对应 FLOPs?**
 
 答:
 
+输入为 1 条序列、`context_length = 1024` 个 token,embedding 输出 `(1, 1024, 1600)`，即 `(batch, context_length, d_model)`。
+
+**不计入矩阵乘的部分**
+
+| 操作 | 量级 | 理由 |
+|---|---|---|
+| embedding | — | 查表,不涉及矩阵乘法 |
+| RMSNorm | `O(context_length · d_model)` | 严格意义上不算矩阵乘法 |
+| RoPE | `O(context_length · d_model)` | rope 在初始化的时候进行矩阵乘法，在正向传播时不纳入计算 |
+| SwiGLU 的逐元素相乘 | `O(context_length · d_ff)` | 逐元素,不是矩阵乘 |
+| softmax | `O(num_heads · context_length²)` | 逐元素 + 行内规约 |
+| 拆 / 合 head | 0 | `rearrange` 只改 shape / stride，切割不影响计算量 |
+
+上述每项都比矩阵乘少一个 `d_model` 或 `d_ff` 因子(约 3 个数量级)，故忽略。
+
+**每个 block 内的矩阵乘(共 9 次)**
+
+| # | 矩阵乘 | 形状 | 次数 | FLOPs |
+|---|---|---|---|---|
+| 1 | q / k / v_proj | `(context_length, d_model) @ (d_model, d_model)` | 3 | `3 · 2·context_length·d_model²` |
+| 2 | Q @ Kᵀ | `(context_length, d_head) @ (d_head, context_length)`，每 head 一次 | 1 | `num_heads · 2·context_length²·d_head` = `2·context_length²·d_model` |
+| 3 | probs @ V | `(context_length, context_length) @ (context_length, d_head)`，每 head 一次 | 1 | `num_heads · 2·context_length²·d_head` = `2·context_length²·d_model` |
+| 4 | output_proj | `(context_length, d_model) @ (d_model, d_model)` | 1 | `2·context_length·d_model²` |
+| 5 | w1 / w3 | `(context_length, d_model) @ (d_model, d_ff)` | 2 | `2 · 2·context_length·d_model·d_ff` |
+| 6 | w2 | `(context_length, d_ff) @ (d_ff, d_model)` | 1 | `2·context_length·d_model·d_ff` |
+
+第 2 / 3 行的 `num_heads` 被约掉了:每个 head 的收缩是 `2·context_length²·d_head`，`num_heads` 个 head 相加得 `2·context_length²·num_heads·d_head = 2·context_length²·d_model`。因此 FLOPs 也与 `num_heads` 无关。
+
+```
+flops_per_block = 8·context_length·d_model²
+                + 4·context_length²·d_model
+                + 6·context_length·d_model·d_ff
+
+                = 2·context_length·d_model · (4·d_model + 2·context_length + 3·d_ff)
+
+代入 = 2×1024×1600 × (4×1600 + 2×1024 + 3×4288)
+     = 3,276,800 × 21,312
+     = 69,835,161,600 FLOPs
+```
+
+**模型级的矩阵乘**
+
+| 矩阵乘 | 形状 | FLOPs | 数值 |
+|---|---|---|---|
+| lm_head | `(context_length, d_model) @ (d_model, vocab_size)` | `2·context_length·d_model·vocab_size` | 164,682,137,600 |
+
+**总计**
+
+```
+total_flops = num_layers · flops_per_block + 2·context_length·d_model·vocab_size
+
+            = 2·context_length·d_model
+              · [ num_layers·(4·d_model + 2·context_length + 3·d_ff) + vocab_size ]
+
+代入 = 3,276,800 × (48 × 21,312 + 50,257)
+     = 3,276,800 × 1,073,233
+     = 3,516,769,894,400 FLOPs ≈ 3.5 × 10¹² FLOPs
+```
+
+校验:经验公式 `2 · N · context_length = 2 × 1,640,452,800 × 1024 ≈ 3.36 × 10¹²`，与精确值相差 4.7%。偏高的原因:attention 的两次收缩没有参数却有 FLOPs，超过了 embedding 有参数但 0 FLOPs 省下的部分。
+
+
 **(c) 哪些部分占 FLOPs 最多?**
 
-答:
+答: 48个block
 
 **(d) GPT-2 small / medium / large 的 FLOPs 分布对比,随规模变化的趋势?**
 
