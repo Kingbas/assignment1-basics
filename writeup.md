@@ -295,9 +295,89 @@ total_flops = num_layers · flops_per_block + 2·context_length·d_model·vocab_
 
 答:
 
+由 `cs336_basics/calculations.py` 在 `meta` 设备上逐个构造模型统计得出（`context_length = 1024`）:
+
+规模:
+
+| model | d_model | layers | heads | d_ff | params | fp32 GiB |
+|---|---|---|---|---|---|---|
+| GPT-2 small | 768 | 12 | 12 | 2,048 | 162,148,608 | 0.60 |
+| GPT-2 medium | 1,024 | 24 | 16 | 2,752 | 406,539,264 | 1.51 |
+| GPT-2 large | 1,280 | 36 | 20 | 3,456 | 842,438,400 | 3.14 |
+| GPT-2 XL | 1,600 | 48 | 25 | 4,288 | 1,640,452,800 | 6.11 |
+
+FLOPs 分布（单位 TFLOPs，一次前向，`batch = 1`）:
+
+| model | 1 block | blocks 合计 | block % | lm_head | lm_head % | 合计 | 2ND | ratio |
+|---|---|---|---|---|---|---|---|---|
+| GPT-2 small | 0.0177 | 0.213 | 72.9% | 0.079 | **27.1%** | 0.292 | 0.332 | **0.878** |
+| GPT-2 medium | 0.0302 | 0.725 | 87.3% | 0.105 | **12.7%** | 0.830 | 0.833 | **0.997** |
+| GPT-2 large | 0.0460 | 1.655 | 92.6% | 0.132 | **7.4%** | 1.787 | 1.725 | **1.036** |
+| GPT-2 XL | 0.0698 | 3.352 | 95.3% | 0.165 | **4.7%** | 3.517 | 3.360 | **1.047** |
+
+- `token_embeddings` 是查表，0 FLOPs，所以 `blocks 合计 + lm_head = 合计`（代码里写成了 `assert`）
+- `ratio` = 合计 / 经验公式 `2·N·context_length`
+
+对 `ratio` 的解释 —— 把精确值与 `2ND` 同时除以公因子 `2·context_length·d_model` 后相减:
+
+```
+精确 / (2·T·d) = num_layers·(4·d_model + 2·context_length + 3·d_ff) + vocab_size
+2ND  / (2·T·d) = N / d_model
+              = num_layers·(2 + 4·d_model + 3·d_ff) + 2·vocab_size + 1
+
+残差 / (2·T·d) = 2·num_layers·context_length - vocab_size - 2·num_layers - 1
+```
+
+`4·d_model` 与 `3·d_ff` 完全抵消 —— 所有“有权重且做矩阵乘”的部分 `2ND` 算得不差。残差只由参数与 FLOPs **不匹配**的部分组成:
+
+| 项 | 来源 | 方向 |
+|---|---|---|
+| `+ 2·num_layers·context_length` | attention 两次收缩：有 FLOPs 无参数 | 使 `2ND` **低估** |
+| `- vocab_size` | `token_embeddings`：有参数 0 FLOPs | 使 `2ND` **高估** |
+| `- 2·num_layers - 1` | RMSNorm 的 gain：有参数，FLOPs 可忽略 | 高估（极小） |
+
+XL 代入:`2×48×1024 - 50257 - 96 - 1 = 47,950`，乘回 `3,276,800` 得 `157,122,560,000`，与 `3,516,769,894,400 - 3,359,647,334,400` 精确相等。
+
+临界条件 `ratio = 1` 即 `2·num_layers·context_length ≈ vocab_size`（`context_length = 1024` 时）:
+
+| model | num_layers | `2·num_layers·context_length` | vs `vocab_size = 50,257` | ratio |
+|---|---|---|---|---|
+| small | 12 | 24,576 | 小于 | 0.878 |
+| medium | 24 | 49,152 | 几乎相等 | 0.997 |
+| large | 36 | 73,728 | 大于 | 1.036 |
+| XL | 48 | 98,304 | 大于 | 1.047 |
+
+注意残差里 **`d_model` 和 `d_ff` 已经消失** —— 起作用的是 `num_layers`、`context_length` 与 `vocab_size` 的竞争，而不是参数量本身。
+
+注:`d_ff` 统一取 `ceil(8/3 · d_model / 64) · 64`（向上取到 64 的倍数）。handout 原词是 "nearest"，两者在 `d_model = 1600` 上重合（均为 4288），但在 `d_model = 1280` 上不同（ceil 得 3456，nearest 得 3392）。此处选 ceil，以保证 `d_ff ≥ 8/3 · d_model`。
+
+结论: 随着参数量变大，ratio变大，表明block的计算量占比变大，llm_head占比变小
+
 **(e) 上下文长度增至 16,384 后,FLOPs 如何变化?**
 
 答:
+
+GPT-2 XL 在两个 `context_length` 下的对比:
+
+| context_length | 1 block | blocks 合计 | block % | lm_head | lm_head % | 合计 | 2ND | ratio |
+|---|---|---|---|---|---|---|---|---|
+| 1,024 | 0.0698 | 3.352 | 95.3% | 0.165 | 4.7% | 3.517 | 3.360 | **1.047** |
+| 16,384 | 2.7280 | 130.943 | 98.0% | 2.635 | 2.0% | **133.578** | 53.754 | **2.485** |
+
+`context_length` 增为 16 倍，精确 FLOPs 增为 `133.578 / 3.517 ≈ 38` 倍（非线性）。
+
+括号内三项的变化（`4·d_model + 2·context_length + 3·d_ff`）:
+
+| 项 | 对应部分 | T = 1,024 | 占比 | T = 16,384 | 占比 |
+|---|---|---|---|---|---|
+| `4·d_model` | 4 个投影 | 6,400 | 30.0% | 6,400 | 12.3% |
+| `2·context_length` | attention 两次收缩 | 2,048 | **9.6%** | 32,768 | **63.0%** |
+| `3·d_ff` | SwiGLU 三个矩阵 | 12,864 | 60.4% | 12,864 | 24.7% |
+| 合计 | | 21,312 | 100% | 52,032 | 100% |
+
+三项里**只有 `2·context_length` 变了**，从最小项变成最大项。此时 `ratio` 升至 2.485，经验公式 `2ND` 已彻底失效——它只数参数，而这时过半 FLOPs 来自**无参数**的 attention 收缩。
+
+结论: 
 
 ---
 
@@ -764,3 +844,178 @@ token_positions  (batch,    seq)             → R 的 ...      = (batch, seq)
 2. `print(state_dict().keys())` 对照 adapter 的 key 清单
 3. `load_state_dict(strict=True)` —— **绝不设 `strict=False`**,它会静默跳过不匹配的 key,权重根本没装进去却毫无提示
 4. 跑测试
+
+### 十二、资源账本(参数量 / FLOPs 手算阶段)
+
+这一节的坑和前面几节不同:**没有一个是报错**。手算题算错了不会有任何提示,只能靠自己设计校验手段。
+
+#### 手算对不上时:先提公因子
+
+FLOPs 的量级是 10¹²,盯着 12 位数看是看不出问题的。
+
+**方法:把公因子 `2·context_length·d_model` 提出来,除掉它。** 剩下的残差是个由超参组成的小整数,肉眼就能核对。
+
+本次实例:算出的"一个 block"是 `234,517,299,200`,除以 `3,276,800` 得 `71,569` —— **整除,说明加法没错,是多加了一项**。再做减法 `71,569 - 21,312 = 50,257` —— 正好是 `vocab_size`,于是定位到:`lm_head` 被错误地算进了 block 内部(它在 48 个 block 之外,只做一次)。
+
+一旦提出公因子,`21,312` 还能继续拆成三项校验:
+
+```
+4·d_model        = 6,400    ← 4 个投影
+2·context_length = 2,048    ← attention 两次收缩
+3·d_ff           = 12,864   ← SwiGLU 三个矩阵
+                   ------
+                   21,312
+```
+
+**这三个数同时也是 (c) 的答案**,占比一除就出来。
+
+#### 用外部锚点验证量级
+
+算出 GPT-2 XL 是 1.64B 之后,和公开数字对一下:真实 GPT-2 XL 约 **1.56B**,我们略大。方向说得通(SwiGLU 三个矩阵 vs 原版两个、无 bias、RoPE 省掉了 `1024 × 1600` 的位置表)。
+
+**落在 1.5~1.7B 就说明结构没漏项。** 量级检查抓不出"少乘一个 1600"这类错(那会差 3 个数量级,一眼就能看出),但能抓出整块模块漏掉。
+
+#### 用代码对账(决定性)
+
+```
+sum(p.numel() for p in model.parameters())
+```
+
+必须**精确等于**手算值,一位不差。量级检查会漏掉的错误,这里全暴露。
+
+两个要点:
+
+- **`model.parameters()` 只返回 `nn.Parameter`,不含 buffer** → RoPE cache 自动被排除,正好对应题目要的 "trainable"。这也反证了当初把 cache 注册成 buffer 是对的
+- **`with torch.device('meta'):`** 构造模型只有张量元信息、不分配存储。XL 有 6.11 GiB 权重,四个模型一起跑要 11 GiB —— 用 meta 就是 0。**而且不需要给 `TransformerLM.__init__` 加 `device` 参数**,这个上下文管理器是全局生效的
+
+#### 经验公式 `2·N·context_length` 与它的两个偏差源
+
+前向 FLOPs ≈ `2 · 参数量 · token 数`(训练是 `6ND`,因为反向约为前向的 2 倍)。
+
+这个粗估在 XL 上偏高 4.7%,偏差来自两股方向相反的力:
+
+| 来源 | 方向 |
+|---|---|
+| `token_embeddings` 有参数但 **0 FLOPs**(查表) | 让 `2ND` **高估** |
+| attention 两次收缩有 FLOPs 但 **无参数** | 让 `2ND` **低估** |
+
+⚠️ 注意 `token_embeddings.weight` 和 `lm_head.weight` **形状相同、参数量相同,但只有后者做矩阵乘**。scaling law 文献里的 `6ND` 通常指 **non-embedding** 参数,就是为了绕开这一点。
+
+这个比值随模型变大而上升(small 0.878 → XL 1.047),因为 embedding 占参数量的比重在萎缩(small 里近一半,XL 里只剩 10%)。
+
+#### 哪些操作不算矩阵乘 —— 判据
+
+**看有没有一根轴被两个操作数共享、且被求和掉**(就是 einsum "轴名不在输出就求和"那条规则)。
+
+- RMSNorm 的 `g` 共享 `d_model`,但 `d_model` **在输出里保留** → 逐元素,不是收缩。内部的平方和是**一个张量自己**的规约
+- `probs @ V` 共享 `keys` 轴且它**不在输出** → 是收缩,**必须算**
+
+量级对比(XL, `context_length=1024`):
+
+| 操作 | 量级 | 数值 |
+|---|---|---|
+| RMSNorm | `O(context_length · d_model)` | ~1.6 M |
+| softmax | `O(num_heads · context_length²)` | ~26 M |
+| 一次权重投影 | `O(context_length · d_model²)` | ~2.6 **G** |
+
+**差 1600 倍,正好是 `d_model`。** handout 只让数矩阵乘,不是因为其他操作免费,而是因为它们小 3 个数量级。
+
+⚠️ RoPE 也属于这一类:cache 在 `__init__` 预算,但那个旋转**每次前向都在跑**,只是量级 `O(context_length · d_model)` 可忽略。写"前向不参与计算"是不准确的,应该写"参与了但量级可忽略"。
+
+#### attention 两次收缩的特殊性
+
+`QKᵀ` 和 `probs @ V` 这一对**两边都是激活,没有权重参与**。三个后果:
+
+1. 在参数量里**根本不出现** → 数 FLOPs 时最容易漏
+2. 量级是 `O(context_length² · d_model)`,随 `context_length` **平方**增长,而所有权重投影只是线性
+3. 漏了它,(e) 会答成"FLOPs 线性增长" —— 直接错
+
+实测:`context_length` 从 1024 涨到 16384(16 倍),FLOPs 涨 **38 倍**;`2·context_length` 这一项在括号里从 9.6% 变成 63%,从最小项变成最大项。**这就是 FlashAttention 和各种长上下文方案存在的直接原因。**
+
+#### 多头不影响参数量,也不影响 FLOPs
+
+- **参数量**:q/k/v 的权重本是每 head 一份 `d_head × d_model`,`num_heads` 份竖着摞起来正好是 `d_model × d_model`
+- **FLOPs**:每 head 的收缩是 `2·context_length²·d_head`,`num_heads` 份相加得 `2·context_length²·num_heads·d_head` = `2·context_length²·d_model`
+
+**拆 head 本身零 FLOPs** —— `rearrange` 只改 shape / stride,不动 storage。所以四个投影按 `d_model × d_model` 整块数就行,不必按 head 拆。
+
+`num_heads` 在整道题里**只在一处真正起作用**:attention 那两次收缩要乘 head 数(然后又被约掉)。
+
+#### 单位:三对容易混的
+
+| 混淆 | 区别 | 后果 |
+|---|---|---|
+| `GiB` vs `GB` | `1024³` vs `1000³`,差 **7%** | 显卡标称的 "80GB" 是十进制值,混用会偏 7%,可能刚好跨过一个整数 batch |
+| `FLOPs` vs `FLOPS` | 操作**次数** vs 每秒操作数(**吞吐率**) | `时间 = 总FLOPs ÷ (硬件FLOP/s × MFU)`,分子分母混了得到量纲错误的答案,而且两个数都"以 T 开头",很难发现 |
+| "加载" vs "训练" | 权重一份 vs 权重+梯度+AdamW 的 m/v+激活 | 6.11 GiB 只是权重。24GB 的 4090 勉强推理,但 AdamW 全参微调装不下(≈26 GiB 还没算激活)—— 这就是 LoRA / 量化 / ZeRO 存在的直接原因 |
+
+**两个单位都写出来**最省事。
+
+#### 张量的三层轴:`batch` 就是"有几条 sequence"
+
+`(batch, context_length, d_model)` = `(1, 1024, 1600)`,主干上**永远 3 轴**。
+
+一句话记法:**每个 token 一个向量,每条序列一串 token,每个 batch 一叠序列。**
+
+⚠️ "1 个 batch、1 个 sequence"是**同一件事说了两遍** —— `batch size` 的定义就是"有几条 sequence",不是两个层级。把它当两层就会写出 `(1, 1, context_length, d_model)` 这种多一根轴的形状。
+
+唯一的第 4 轴只在 MHA 内部拆完 head 后出现,长度是 `num_heads` 而不是 1,`output_proj` 之后就消失。
+
+另外:**权重和激活必须分开叫**。`token_embeddings.weight` 是 `(vocab_size, d_model)`、全模型一份;embedding 的**输出**是 `(batch, context_length, d_model)`、每次前向一份。两个都叫"embedding 矩阵"必然出错 —— 和之前 `q_proj` vs `Q` 是同一个坑。
+
+同理,attention 里连着三个中间张量都叫"V 矩阵"也是错的:`probs @ V` 的输出、`output_proj` 的输出、SwiGLU 的输入是**三个不同的张量**。
+
+#### `context_length` 与参数量无关
+
+`context_length` 是**输入的属性,不是权重的属性**。它绝不该出现在参数量公式里。
+
+推论 —— 写 `count_forward_flops(model, ???)` 时的签名设计:`vocab_size` / `d_model` / `d_ff` 能从权重 `.shape` 读出,`num_layers` 能从 `ModuleList` 的 `len()` 读出,但 **`context_length` 只能作为参数传进来**。(从 RoPE cache 长度读也不对 —— 那是"最大支持长度",不是"这次实际输入长度"。)
+
+FLOPs 对 `batch` 严格线性,参数量与 `batch` 完全无关。
+
+#### 取整到某个粒度:`ceil` 该套在哪一层
+
+```python
+# 错:ceil 作用在乘积上,/64*64 互相抵消,等于什么都没做
+d_ff = int(math.ceil(8/3 * d_model) / 64 * 64)        # 1600 -> 4267
+
+# 对:ceil 作用在"是 64 的几倍"上
+d_ff = int(math.ceil(8/3 * d_model / 64) * 64)        # 1600 -> 4288
+```
+
+要向上取整的对象不是 `8/3 · d_model` 这个数,而是**它是 64 的几倍**。
+
+**必须加的断言:结果能被 64 整除。** 这类错误的可怕之处在于数字看起来"差不多对"(4267 vs 4288 只差 0.5%),肉眼极难发现,但一个 `% 64 == 0` 就能拦住。
+
+另外 `d_ff` 有两处独立来源(`SwiGLU` 的默认值、脚本里手写的 config),**要互相对账**。对不上说明其中一个错了。
+
+顺带一个规则歧义:handout 说 "nearest multiple of 64",而 `ceil` 和 "nearest" 在 `d_model = 1600` 上恰好都给 4288,在 `d_model = 1280` 上却不同(3456 vs 3392)。**这种情况要在 writeup 里写明自己用的是哪个规则**,否则批改的人分不清是有意选择还是算错。
+
+#### Python 包机制:`attempted relative import with no known parent package`
+
+直接执行包内文件时,Python 把 `__name__` 设为 `"__main__"`、`__package__` 设为 `None`。相对导入的 `.` 是**相对 `__package__` 解析**的,没有父包 → 报错。
+
+**一个文件是"包的一部分"还是"脚本",取决于怎么启动它,而不是它放在哪个目录。** 同一个文件被 `import` 时相对导入正常,被直接执行就炸。
+
+| 方案 | 代价 |
+|---|---|
+| 改绝对导入 `from cs336_basics.xxx import` | 无。`import` 和直接执行都能用,且和 `tests/adapters.py` 的写法一致 |
+| `python -m cs336_basics.calculations` | 能用,但绑定了启动方式和工作目录 |
+
+用 `uv run python ...` 而不是手敲 `.venv/bin/python` 全路径 —— `uv run` 会自己确保依赖同步。
+
+#### 报告脚本的职责划分
+
+**计算函数只返回数字,绝不 `print`;打印函数只负责格式化,绝不计算。**
+
+理由很实在:数字可以写 `assert`,`print` 不能。一旦在 `count_parameters` 里塞了 `print`,就没法在测试里干净地用它。
+
+其他几条:
+
+- **千分位 `f"{n:,}"`** —— 12 位数不加千分位读不出来。前面那个多算的 `lm_head` 就是因为盯着裸数字看不出来
+- **占比列加一行合计**,应当正好 100% —— 这一行本身就是断言,能查出分项漏了一项
+- **中文在终端占两格而 `len()` 只算一格**,表格对齐要用 `unicodedata.east_asian_width` 判宽
+- **不要硬编码超参**,全部从 `model` 读 —— 这样对比 small/medium/large 只是换 config,不用手算三遍
+- **表格函数接受一组 config 而不是一个** —— (d) 是一次调用输出四行,(e) 是同一个 config 换 `context_length` 跑两次
+
+⚠️ **脚本是验算,不是答案来源。** writeup 里该留的是推导,不是脚本输出。如果脚本和手算不一致,**先怀疑脚本** —— 手算已经用提公因子的方法独立验过一遍了,脚本是新写的。

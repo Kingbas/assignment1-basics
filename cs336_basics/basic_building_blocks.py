@@ -52,7 +52,7 @@ class SwiGLU(torch.nn.Module):
     def __init__(self, d_model, d_ff=None, device=None, dtype=None) -> None:
         super().__init__()
         if d_ff is None:
-            d_ff = int((8/3 * d_model) // 64 * 64)
+            d_ff = int(math.ceil(8/3 * d_model / 64) * 64)
         self.w1 = Linear(d_model, d_ff, device, dtype)
         self.w2 = Linear(d_ff, d_model, device, dtype)
         self.w3 = Linear(d_model, d_ff, device, dtype)
