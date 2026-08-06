@@ -227,6 +227,25 @@ class TransformerLM(torch.nn.Module):
         return x
 
 
+def cross_entropy_loss(inputs: Float[Tensor, " ... seq_len vocab_size"], targets: Int[Tensor, " ... seq_len"]) -> Float[Tensor, ""]:
+    # targets中是vocab中对应的index
+    # inputs中是未标准化的 [x_0:x_i]的下一个词在vocab中的logits
+    # 根据target[0]，可以算出x_0:x_0的交叉熵，以此类推，分子为目标输出的概率
+    batch_boradcast = torch.ones([1,1,1], dtype=torch.int)
+    inputs = inputs * batch_boradcast
+    seq_len = inputs.shape[-2]
+    batch_size = inputs.shape[-3]
+    # 计算最大值
+    logits_max = inputs.max(dim=-1, keepdim=True).values # ... seq_len 1
+    inputs = inputs - logits_max
+    # 计算交叉熵的分子
+    logits = inputs[..., torch.arange(seq_len, device=inputs.device), targets] # 用seq_len替换被索引的维度 ... seq_len
+    # 计算交叉熵
+    p = logits - torch.log(torch.sum(torch.exp(inputs), dim=-1)) # ... seq_len  - ... seq_len = ... seq_len
+    loss = -torch.sum(p) / (seq_len * batch_size)
+    return loss
+
+
 if __name__ == '__main__':
     l = Linear(3, 1)
     x = torch.rand([3,3])
