@@ -6,6 +6,9 @@ from einops import einsum, rearrange
 import math
 from jaxtyping import Bool, Float, Int
 from typing import Any
+from torch.optim.optimizer import ParamsT
+from collections.abc import Callable, Iterable
+from typing import Optional
 
 class Linear(torch.nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None):
@@ -245,6 +248,50 @@ def cross_entropy_loss(inputs: Float[Tensor, " ... seq_len vocab_size"], targets
     loss = -torch.sum(p) / (seq_len * batch_size)
     return loss
 
+
+
+class AdamW(torch.optim.Optimizer):
+    def __init__(self, params: ParamsT, lr, weight_decay, betas=(0.9, 0.999), eps=1e-8) -> None:
+        if lr < 0:
+            raise ValueError(f"Invalid learning rate: {lr}")
+        if betas[0] < 0 or betas[1] < 0:
+            raise ValueError("Invalid beta")
+
+        defaults = {
+            "lr": lr,
+            "weight_decay": weight_decay,
+            "beta1": betas[0],
+            "beta2": betas[1],
+            "eps": eps
+        }
+        super().__init__(params, defaults)
+    
+    @torch.no_grad()
+    def step(self, closure: Optional[Callable] = None):
+        loss = None if closure is None else closure()
+        for group in self.param_groups:
+            lr = group["lr"]  # Get the learning rate.
+            for p in group["params"]:
+                if p.grad is None:
+                    continue
+                state = self.state[p]  # Get state associated with p.
+                t = state.get("t", 1)  # Get iteration number from the state, or 1.
+                if t == 1:
+                    self.state[p]['m'] = torch.zeros_like(p)
+                    self.state[p]['v'] = torch.zeros_like(p)
+                
+                lr_t = lr * math.sqrt(1 - group["beta2"] ** t) / (1 - group["beta1"] ** t) # if t is initiated with 0, the divisor will be zero
+                p.data = p.data - lr * group["weight_decay"] * p.data
+
+                self.state[p]['m'] = group["beta1"] * self.state[p]['m'] + (1 - group["beta1"]) * p.grad
+                self.state[p]['v'] = group["beta2"] * self.state[p]['v'] + (1 - group["beta2"]) * p.grad ** 2
+                p.data = p.data - lr_t * self.state[p]['m'] / (torch.sqrt(self.state[p]['v']) + group["eps"])
+
+                state["t"] = t + 1  # Increment iteration number.
+        return loss
+
+    
+    
 
 if __name__ == '__main__':
     l = Linear(3, 1)

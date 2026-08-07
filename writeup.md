@@ -391,7 +391,7 @@ GPT-2 XL 在两个 `context_length` 下的对比:
 
 **SGD toy example 中不同学习率下 loss 的行为?**
 
-答:
+答: lr越大loss衰减越快，一次更新的梯度就越大
 
 ### Problem (adamw): Implement AdamW (2 points) 💻
 
