@@ -400,8 +400,66 @@ GPT-2 XL 在两个 `context_length` 下的对比:
 ### Problem (adamw_accounting): Resource accounting for AdamW (2 points) 📝
 
 **(a) 峰值内存的表达式(参数/梯度/优化器状态/激活)?**
+# TODO
 
-答:
+用batch_size vocab_size, context_length, num_layers, d_model, num_heads回答
+
+答: 在训练中，内存使用分为四大类
+
+参数本身：P
+
+梯度：P
+
+adamW优化器的state：2P
+
+所以本题只用分析激活值
+
+激活值：前向传播过程中为反向传播保存的中间张量
+
+理想状况下
+
+transformer block中的RMSNorm、MHA、SwiGLU
+
+RMSNorm：
+
+    def forward(self, x: Float[torch.Tensor, 'batch_size sequence_length d_model']) -> Float[torch.Tensor, 'batch_size sequence_length d_model']:
+        original_dtype = x.dtype
+        x = x.to(torch.float32)
+        rms = torch.sqrt(1/self.d_model * torch.square(x).sum(dim=-1, keepdim=True) + self.eps)
+        x = x * self.weight / rms
+        return x.to(original_dtype)
+     
+
+     计算x = x * self.weight / rms这里的内存开销峰值为2*输入
+
+MHA：
+
+     x对QKV的投影各存一份输入x
+
+     sdpa中Q*K.T，这里对Q和K各存一份K和Q，softmax存输出，与V矩阵相乘存一个scores矩阵
+
+
+SwiGLU：
+
+
+block外的最终RMSNorm、output embedding、交叉熵
+
+RMSNorm：
+
+同上
+
+output embedding：
+
+
+
+交叉熵：
+
+
+
+QKV投影是xQ xK xV，对于QKV要保存x， batch seq d_model * 3，以及QKV自身的参数和梯度
+
+
+
 
 **(b) GPT-2 XL 在 80GB 内存下能用的最大 batch size?**
 

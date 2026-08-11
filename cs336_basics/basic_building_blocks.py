@@ -302,6 +302,14 @@ def learning_rate_schedule(it: int,
     return min_learning_rate
 
 
+def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
+    # 逐张量计算L2范式，累加并开根
+
+    for p in parameters:
+        pass
+
+
+
 if __name__ == '__main__':
     l = Linear(3, 1)
     x = torch.rand([3,3])
