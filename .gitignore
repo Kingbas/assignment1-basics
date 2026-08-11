@@ -165,5 +165,7 @@ cython_debug/
 # Datasets (large files, do not commit)
 data/
 
+.vscode/
+
 .DS_Store
 *.svg
