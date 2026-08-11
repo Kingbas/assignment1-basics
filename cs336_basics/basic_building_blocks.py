@@ -119,7 +119,7 @@ def softmax(x, n_dim):
     return x
 
 
-def scaledDotProductAttention(Q: Float[Tensor, " ... queries d_k"],
+def scaled_dot_product_attention(Q: Float[Tensor, " ... queries d_k"],
                         K: Float[Tensor, " ... keys d_k"],
                         V: Float[Tensor, " ... keys d_v"],
                         mask: Bool[Tensor, " ... queries keys"] | None = None):
@@ -165,7 +165,7 @@ class CausalMultiHeadSelfAttention(torch.nn.Module):
         V = rearrange(V, '... seq (h d_head) -> ... h seq d_head', d_head=self.d_head)
         seq = Q.shape[-2]
         mask = torch.tril(torch.ones(seq, seq, dtype=torch.bool)).to(x.device)
-        scores = scaledDotProductAttention(Q, K ,V, mask) # ... h seq_q d_head
+        scores = scaled_dot_product_attention(Q, K ,V, mask) # ... h seq_q d_head
         scores = rearrange(scores, '... h seq_q d_head -> ... seq_q (h d_head)')
         return self.output_proj(scores)
 
@@ -290,8 +290,17 @@ class AdamW(torch.optim.Optimizer):
                 state["t"] = t + 1  # Increment iteration number.
         return loss
 
-    
-    
+def learning_rate_schedule(it: int,
+                        max_learning_rate: float,
+                        min_learning_rate: float,
+                        warmup_iters: int,
+                        cosine_cycle_iters: int,):
+    if it < warmup_iters:
+        return it / warmup_iters * max_learning_rate
+    if it <= cosine_cycle_iters:
+        return min_learning_rate + 0.5 * (1 + math.cos(((it - warmup_iters)/(cosine_cycle_iters - warmup_iters))*math.pi))*(max_learning_rate - min_learning_rate)
+    return min_learning_rate
+
 
 if __name__ == '__main__':
     l = Linear(3, 1)
