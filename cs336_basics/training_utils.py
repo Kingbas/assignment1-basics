@@ -1,3 +1,5 @@
+import os
+from typing import IO, BinaryIO
 
 from einops import rearrange
 import numpy as np
@@ -21,8 +23,31 @@ def get_batch(dataset: npt.NDArray, batch_size: int, context_length: int, device
     return (input_token_ids, output_token_ids)
 
 
+def save_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    iteration: int,
+    out: str | os.PathLike | BinaryIO | IO[bytes],
+):
+    model_weights = model.state_dict()
+    opt_weights = optimizer.state_dict()
+    checkpoint = {
+        'model_weights': model_weights,
+        'opt_weights': opt_weights,
+        'it': iteration
+    }
+    torch.save(checkpoint, out)
 
 
+def load_checkpoint(
+    src: str | os.PathLike | BinaryIO | IO[bytes],
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+) -> int:
+    checkpoint = torch.load(src)
+    model.load_state_dict(checkpoint['model_weights'])
+    optimizer.load_state_dict(checkpoint['opt_weights'])
+    return checkpoint['it'] 
 
 
 if __name__ == '__main__':
