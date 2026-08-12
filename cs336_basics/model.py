@@ -1,14 +1,14 @@
+"""对应 tests/test_model.py:模型组件及其专属算子。"""
 
-from ast import List
-import torch
-from torch import Tensor
-from einops import einsum, rearrange
 import math
+
+import torch
+from einops import einsum, rearrange
 from jaxtyping import Bool, Float, Int
-from typing import Any
-from torch.optim.optimizer import ParamsT
-from collections.abc import Callable, Iterable
-from typing import Optional
+from torch import Tensor
+
+from cs336_basics.nn_utils import softmax
+
 
 class Linear(torch.nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None):
@@ -107,16 +107,6 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         x = einsum(x, R, '...  pairs row, ...  pairs col row -> ...  pairs col') # alternative impl of the einsum above
         x = rearrange(x, '... pairs out -> ... (pairs out)')
         return x
-
-
-def softmax(x, n_dim):
-    # 首先把n_dim维的最大值找出来
-    x_max = torch.max(x, dim=n_dim, keepdim=True).values
-    x = x - x_max
-    temp = torch.exp(x)
-    x_sum = torch.sum(temp, dim=n_dim, keepdim=True)
-    x = temp/ x_sum
-    return x
 
 
 def scaled_dot_product_attention(Q: Float[Tensor, " ... queries d_k"],
@@ -230,106 +220,8 @@ class TransformerLM(torch.nn.Module):
         return x
 
 
-def cross_entropy_loss(inputs: Float[Tensor, " ... seq_len vocab_size"], targets: Int[Tensor, " ... seq_len"]) -> Float[Tensor, ""]:
-    # targets中是vocab中对应的index
-    # inputs中是未标准化的 [x_0:x_i]的下一个词在vocab中的logits
-    # 根据target[0]，可以算出x_0:x_0的交叉熵，以此类推，分子为目标输出的概率
-    inputs = inputs.reshape(-1, inputs.size(-1)) # total_seq vocab_size
-    targets = targets.reshape(-1) # total_seq
-    token_num = inputs.shape[-2]
-    # 计算最大值
-    logits_max = inputs.max(dim=-1, keepdim=True).values # total_seq 1
-    inputs = inputs - logits_max
-    # 计算交叉熵的分子
-    logits = inputs[torch.arange(token_num, device=inputs.device), targets] # 用total_seq替换被索引的维度 total_seq
-    # 计算交叉熵
-    p = logits - torch.log(torch.sum(torch.exp(inputs), dim=-1)) # total_seq - total_seq = total_seq
-    loss = -torch.mean(p)
-    return loss
-
-
-
-class AdamW(torch.optim.Optimizer):
-    def __init__(self, params: ParamsT, lr, weight_decay, betas=(0.9, 0.999), eps=1e-8) -> None:
-        if lr < 0:
-            raise ValueError(f"Invalid learning rate: {lr}")
-        if betas[0] < 0 or betas[1] < 0:
-            raise ValueError("Invalid beta")
-
-        defaults = {
-            "lr": lr,
-            "weight_decay": weight_decay,
-            "beta1": betas[0],
-            "beta2": betas[1],
-            "eps": eps
-        }
-        super().__init__(params, defaults)
-    
-    @torch.no_grad()
-    def step(self, closure: Optional[Callable] = None):
-        loss = None if closure is None else closure()
-        for group in self.param_groups:
-            lr = group["lr"]  # Get the learning rate.
-            for p in group["params"]:
-                if p.grad is None:
-                    continue
-                state = self.state[p]  # Get state associated with p.
-                t = state.get("t", 1)  # Get iteration number from the state, or 1.
-                if t == 1:
-                    self.state[p]['m'] = torch.zeros_like(p)
-                    self.state[p]['v'] = torch.zeros_like(p)
-                
-                lr_t = lr * math.sqrt(1 - group["beta2"] ** t) / (1 - group["beta1"] ** t) # if t is initiated with 0, the divisor will be zero
-                p.data = p.data - lr * group["weight_decay"] * p.data
-
-                self.state[p]['m'] = group["beta1"] * self.state[p]['m'] + (1 - group["beta1"]) * p.grad
-                self.state[p]['v'] = group["beta2"] * self.state[p]['v'] + (1 - group["beta2"]) * p.grad ** 2
-                p.data = p.data - lr_t * self.state[p]['m'] / (torch.sqrt(self.state[p]['v']) + group["eps"])
-
-                state["t"] = t + 1  # Increment iteration number.
-        return loss
-
-def learning_rate_schedule(it: int,
-                        max_learning_rate: float,
-                        min_learning_rate: float,
-                        warmup_iters: int,
-                        cosine_cycle_iters: int,):
-    if it < warmup_iters:
-        return it / warmup_iters * max_learning_rate
-    if it <= cosine_cycle_iters:
-        return min_learning_rate + 0.5 * (1 + math.cos(((it - warmup_iters)/(cosine_cycle_iters - warmup_iters))*math.pi))*(max_learning_rate - min_learning_rate)
-    return min_learning_rate
-
-
-def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float, eps: float=1e-6) -> None:
-    # 将parameter放进容器中
-    parameters = list(parameters)
-    # 逐张量计算L2范式，累加并开根
-    grad_square_sum = torch.zeros([]) + 0.0
-    for p in parameters:
-        if p.grad is not None:
-            grad_square_sum += p.grad.square().sum()
-    g2 = torch.sqrt(grad_square_sum)
-
-    c = torch.clamp(max_l2_norm / (g2 + eps), max=1.0)
-
-    for p in parameters:
-        if p.grad is not None:
-            p.grad = p.grad * c
-
-
 if __name__ == '__main__':
-    l = Linear(3, 1)
-    x = torch.rand([3,3])
-    weights = torch.rand([1,3])
-    out = l(x)
-
-    d_model = 64
-    d_ff = 256
-    swiglu = SwiGLU(d_model)
-    print(list(swiglu.state_dict().keys()))
-    swiglu(torch.rand([1,64]))
-
+    # RoPE 自查:官方测试不覆盖非连续的 token_positions,这里手动验证
     rope = RotaryPositionalEmbedding(10000.0, d_k=8, max_seq_len=16)
 
     print(list(rope.state_dict().keys()))          # → []
@@ -347,15 +239,3 @@ if __name__ == '__main__':
     # 单独把第 1 个 token 按位置 7 算一次
     y_single = rope(x[:, 1:2], torch.tensor([[7]]))
     assert torch.allclose(y[:, 1], y_single[:, 0], atol=1e-6)
-    
-
-    vocab_size=  50257
-    context_length= 1024
-    num_layers= 48
-    d_model= 1600
-    num_heads= 25
-    d_ff= 4288
-    lm = TransformerLM(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, 10000)
-    # 还真是1640452800
-
-    pass

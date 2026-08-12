@@ -233,7 +233,7 @@ memory = 4 · N  bytes(fp32)
 |---|---|---|
 | embedding | — | 查表,不涉及矩阵乘法 |
 | RMSNorm | `O(context_length · d_model)` | 严格意义上不算矩阵乘法 |
-| RoPE | `O(context_length · d_model)` | rope 在初始化的时候进行矩阵乘法，在正向传播时不纳入计算 |
+| RoPE | `O(context_length · d_model)` | rope 在初始化的时候进行矩阵乘法，在正向传播时纳入计算，但量级小 |
 | SwiGLU 的逐元素相乘 | `O(context_length · d_ff)` | 逐元素,不是矩阵乘 |
 | softmax | `O(num_heads · context_length²)` | 逐元素 + 行内规约 |
 | 拆 / 合 head | 0 | `rearrange` 只改 shape / stride，切割不影响计算量 |

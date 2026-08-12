@@ -148,33 +148,3 @@ class BPETokenizer(Tokenizer):
             decoded.append(self.vocab[id])
         return b''.join(decoded).decode(errors='replace')
         
-if __name__ == '__main__':
-    from tests.common import FIXTURES_PATH
-    from tests.test_tokenizer import get_tokenizer_from_vocab_merges_path
-
-    VOCAB_PATH = FIXTURES_PATH / "gpt2_vocab.json"
-    MERGES_PATH = FIXTURES_PATH / "gpt2_merges.txt"
-    tokenizer = get_tokenizer_from_vocab_merges_path(VOCAB_PATH, MERGES_PATH, ['<|endoftext|>'])
-    test_string = "Héllò hôw <|endoftext|><|endoftext|> are ü? 🙃<|endoftext|>"
-    encoded_ids = tokenizer.encode(test_string)
-    tokenized_string = [tokenizer.decode([x]) for x in encoded_ids]
-    decoded_string = tokenizer.decode(encoded_ids)
-
-    import tiktoken
-    reference_tokenizer = tiktoken.get_encoding("gpt2")
-    test_string = "Héllò hôw <|endoftext|><|endoftext|> are ü? 🙃<|endoftext|>"
-
-    reference_ids = reference_tokenizer.encode(test_string, allowed_special={"<|endoftext|>"})
-    ids = tokenizer.encode(test_string)
-
-
-    corpus_path = FIXTURES_PATH / "tinystories_sample.txt"
-    with open(corpus_path) as f:
-        corpus_contents = f.read()
-    reference_ids = reference_tokenizer.encode(corpus_contents, allowed_special={"<|endoftext|>"})
-    all_ids = []
-    with open(FIXTURES_PATH / "tinystories_sample.txt") as f:
-        for _id in tokenizer.encode_iterable(f):
-            all_ids.append(_id)
-
-    pass

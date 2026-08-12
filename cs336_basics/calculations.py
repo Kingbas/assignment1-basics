@@ -3,7 +3,7 @@ import unicodedata
 
 import torch
 
-from cs336_basics.basic_building_blocks import TransformerBlock, TransformerLM
+from cs336_basics.model import TransformerBlock, TransformerLM
 
 
 def count_parameters(model) -> int:
