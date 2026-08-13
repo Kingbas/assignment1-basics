@@ -1,8 +1,23 @@
 
-
+import os
 import json
 import regex as re
+from functools import lru_cache
+import psutil
+import resource
+from concurrent.futures import ProcessPoolExecutor
 
+import time
+from contextlib import contextmanager
+from typing import BinaryIO
+
+@contextmanager
+def timed(label):
+    t0 = time.perf_counter()
+    try:
+        yield
+    finally:
+        print(f"{label}: {time.perf_counter() - t0:.3f}s rss:{psutil.Process().memory_info().rss/1024/1024:.3f}MB")
 """
 
     首先要对corpus进行pre_tokenization
@@ -14,6 +29,7 @@ import regex as re
 # regex pattern used in gpt-2 pre-tokenizer
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
+@timed('bpe init vocab')
 def init_vocab(special_tokens: list[str]) -> dict[int, bytes]:
     vocab: dict[int, bytes] = {}
     i = 0
@@ -26,22 +42,29 @@ def init_vocab(special_tokens: list[str]) -> dict[int, bytes]:
     return vocab
 
 
-def bpe_tokenizer_worker(file_path: str, special_tokens: list[str], pretrained_tokenization: dict[tuple, int]):
-    with open(file=file_path) as f:
-        texts = f.read()
+@timed('bpe pre-tokenizing')
+def bpe_tokenizer_worker(file_path: str, special_tokens: list[str], offset: tuple[int, int]):
     special_token_pattern = '|'.join(re.escape(special_token) for special_token in special_tokens)
-    texts = re.split(special_token_pattern, texts)
+    token_count: dict[tuple(bytes), int] = {}
+    with open(file_path, 'rb') as f:
+        f.seek(offset[0])
+        with timed(f'bpe tokenizer: prepare chunk {offset[0]/1024/1024:.3f}MB:{offset[1]/1024/1024:.3f}MB'):
+            texts = f.read(offset[1] - offset[0]).decode("utf-8", errors="ignore")
+            texts = re.split(special_token_pattern, texts)
+        with timed('bpe tokenizer: process chunk'):
+            for text in texts:
+                tokens = re.findall(PAT, text)
+                for token in tokens:
+                    # 初版实现
+                    # key = tuple(bytes([x]) for x in token.encode('UTF-8'))
+                    # pretrained_tokenization[key] = pretrained_tokenization.get(key, 0) + 1
+                    token_count[token] = token_count.get(token, 0) + 1
+    # 交由父进程进行
+    # token_count = {tuple(bytes([x]) for x in k.encode('UTF-8')):v for k, v in token_count.items()}
+    return token_count
 
-    
-    for text in texts:
-        tokens = re.findall(PAT, text)
-        for token in tokens:
-            key = tuple(bytes([x]) for x in token.encode('UTF-8'))
-            pretrained_tokenization[key] = pretrained_tokenization.get(key, 0) + 1
-    pass
 
-
-def bpe_tokenizer_merger(vocab, merges, pretrained_tokenization) -> dict[tuple, int]:
+def bpe_tokenizer_merger(vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], pretrained_tokenization: dict[tuple, int], pair_token: dict[tuple[bytes, bytes], set[tuple[bytes]]]) -> dict[tuple, int]:
     pair_count: dict[tuple[bytes, bytes], int] = {}
     # 通过词频统计pair频率
     for key in pretrained_tokenization.keys():
@@ -71,17 +94,139 @@ def bpe_tokenizer_merger(vocab, merges, pretrained_tokenization) -> dict[tuple, 
     return freq_temp
 
 
-def bpe_tokenizer_main(input_path: str, vocab_size: int, special_tokens: list[str]):
-    vocab: dict[int, bytes] = init_vocab(special_tokens)
-    pretrained_tokenization: dict[tuple, int] = {}
-    merges: list[tuple[bytes, bytes]] = []
+def bpe_serializer(vocab: dict[int, bytes], merges, out_path='data'):
+    gpt2_encoder = gpt2_bytes_to_unicode()
+    vocab_out = { ''.join([gpt2_encoder[v] for v in val]): key for key, val in vocab.items()}
+    assert len(vocab_out) == len(vocab)
+    merges_out = '\n'.join([ ''.join([gpt2_encoder[b] for b in merge[0]]) + ' ' + ''.join([gpt2_encoder[b] for b in merge[1]]) for merge in merges])
+    with open(os.path.join(out_path, 'vocab.json'), 'w', encoding='utf-8') as f:
+        print(f'dumping vocab.json into {out_path}')
+        json.dump(vocab_out, f, ensure_ascii=False)
+    with open(os.path.join(out_path, 'merges.txt'), 'w', encoding='utf-8') as f:
+        print(f'dumping merges.txt into {out_path}')
+        f.writelines(merges_out)
+    
 
-    bpe_tokenizer_worker(input_path, special_tokens, pretrained_tokenization)
-    while len(vocab) < vocab_size:
-        before_vocab_size = len(vocab)
-        pretrained_tokenization = bpe_tokenizer_merger(vocab, merges, pretrained_tokenization)
-        after_vocab_size = len(vocab)
-        if before_vocab_size == after_vocab_size:
-            break
+def bpe_tokenizer_main(input_path: str, vocab_size: int, special_tokens: list[str], chunk_num=8, out_path=None, max_workers=4):
+    with timed('bpe main time'):
+        vocab: dict[int, bytes] = init_vocab(special_tokens)
+        pretrained_tokenization: dict[tuple, int] = {}
+        merges: list[tuple[bytes, bytes]] = []
+
+        with open(input_path, 'rb') as f:
+            boundaries = find_chunk_boundaries(f, chunk_num, b"<|endoftext|>")
+        offsets = list(zip(boundaries[:-1], boundaries[1:]))
+        
+        task_num = len(offsets)
+        with timed('pre tokenizing total time'), ProcessPoolExecutor(max_workers) as ex:
+            results = list(ex.map(bpe_tokenizer_worker, [input_path] * task_num, [special_tokens] * task_num, [offsets[i] for i in range(task_num)]))
+
+        token_count: dict[str, int] = {}
+        for result in results:
+            for k, v in result.items():
+                token_count[k] = token_count.get(k, 0) + v
+        with timed('bpe pre-tokenizer: convert str to bytes'):
+            pretrained_tokenization = {tuple(bytes([x]) for x in k.encode('UTF-8')):v for k, v in token_count.items()}
+
+
+        t0 = time.perf_counter()
+        print(f'bpe merger: vocab size:{len(vocab)} elapsed time:{time.perf_counter() - t0:.3f}s rss:{psutil.Process().memory_info().rss/1024/1024:.3f}MB')
+        with timed('bpe main merger'):
+            # 建立 pair: set(tokens) 的字典
+            pair_token: dict[tuple[bytes, bytes], set[tuple[bytes]]] = {}
+            for token in pretrained_tokenization.keys():
+                for i in range(len(token) - 1):
+                    pair = (token[i], token[i+1])
+                    pair_token[pair] = pair_token.get(pair, set([token])) | set([token])
+            
+            # 建立 pair: freq
+            pair_count = {}
+            for key in pretrained_tokenization.keys():
+                for i in range(len(key)-1):
+                    pair = (key[i], key[i+1])
+                    pair_count[pair] = pair_count.get(pair, 0) + pretrained_tokenization[key]
+
+            while len(vocab) < vocab_size:
+                before_vocab_size = len(vocab)
+                pretrained_tokenization = bpe_tokenizer_merger(vocab, merges, pretrained_tokenization, pair_token)
+                after_vocab_size = len(vocab)
+                if before_vocab_size == after_vocab_size:
+                    break
+                if len(vocab) % 200 == 0:
+                    print(f'bpe merger: vocab size:{len(vocab)} elapsed time:{time.perf_counter() - t0:.3f}s rss:{psutil.Process().memory_info().rss/1024/1024:.3f}MB')
+        print(f'bpe merger: vocab size:{len(vocab)} elapsed time:{time.perf_counter() - t0:.3f}s rss:{psutil.Process().memory_info().rss/1024/1024:.3f}MB')
+    if out_path is not None:
+        os.makedirs(out_path, exist_ok=True)
+        with timed('bpe serilizing time'):
+            bpe_serializer(vocab, merges, out_path)
+    
+
+    vocab_vals = [f'[{v.decode('utf-8', errors='replace')}]' for v in list(vocab.values())]
+    vocab_vals = sorted(vocab_vals, key=lambda p: (len(p), p), reverse=True)
+    print(f'top 20 longest tokens are \n{'\n'.join(vocab_vals[:20])}')
+    print(f'maxrss is {resource.getrusage(resource.RUSAGE_SELF ).ru_maxrss/1024/1024:.3f}MB')
     return vocab, merges
 
+
+@lru_cache
+def gpt2_bytes_to_unicode() -> dict[int, str]:
+    bs = list(range(ord("!"), ord("~") + 1)) + list(range(ord("¡"), ord("¬") + 1)) + list(range(ord("®"), ord("ÿ") + 1))
+    cs = bs[:]
+    n = 0
+    for b in range(2**8):
+        if b not in bs:
+            # If this integer isn't in our list of visually-representable
+            # charcters, then map it to the next nice character (offset by 256)
+            bs.append(b)
+            cs.append(2**8 + n)
+            n += 1
+    characters = [chr(n) for n in cs]
+    d = dict(zip(bs, characters))
+    return d
+
+
+def find_chunk_boundaries(
+    file: BinaryIO,
+    desired_num_chunks: int,
+    split_special_token: bytes,
+) -> list[int]:
+    """
+    Chunk the file into parts that can be counted independently.
+    May return fewer chunks if the boundaries end up overlapping.
+    """
+    assert isinstance(split_special_token, bytes), "Must represent special token as a bytestring"
+
+    # Get total file size in bytes
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    chunk_size = file_size // desired_num_chunks
+
+    # Initial guesses for chunk boundary locations, uniformly spaced
+    # Chunks start on previous index, don't include last index
+    chunk_boundaries = [i * chunk_size for i in range(desired_num_chunks + 1)]
+    chunk_boundaries[-1] = file_size
+
+    mini_chunk_size = 4096  # Read ahead by 4k bytes at a time
+
+    for bi in range(1, len(chunk_boundaries) - 1):
+        initial_position = chunk_boundaries[bi]
+        file.seek(initial_position)  # Start at boundary guess
+        while True:
+            mini_chunk = file.read(mini_chunk_size)  # Read a mini chunk
+
+            # If EOF, this boundary should be at the end of the file
+            if mini_chunk == b"":
+                chunk_boundaries[bi] = file_size
+                break
+
+            # Find the special token in the mini chunk
+            found_at = mini_chunk.find(split_special_token)
+            if found_at != -1:
+                chunk_boundaries[bi] = initial_position + found_at
+                break
+            initial_position += mini_chunk_size
+
+    # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
+    return sorted(set(chunk_boundaries))

@@ -50,8 +50,8 @@ def find_chunk_boundaries(
 
 
 ## Usage
-with open('data/sample_10mb.txt', "rb") as f:
-    num_processes = 4
+with open('data/owt_train.txt', "rb") as f:
+    num_processes = 16
     boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
 
     # The following is a serial implementation, but you can parallelize this
@@ -65,3 +65,4 @@ with open('data/sample_10mb.txt', "rb") as f:
         # with open(f"data/chunk/chunk_{start}_{end}.txt", "w") as chunk_file:
         #     chunk_file.write(chunk)
         # Run pre-tokenization on your chunk and store the counts for each pre-token
+    pass

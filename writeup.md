@@ -72,9 +72,114 @@ max() 空集合崩:语料 merge 榨干时 pair_count 为空 → 要加"无 pair 
 
 答:
 
+jinxin@jinxindeMacBook-Air assignment1-basics % /usr/bin/time -l uv run python cs336_basics/experiments/tokenizer_experiments.py
+bpe init vocab: 0.000s
+open file: 4.743s
+bpe pre-tokenizing: 292.255s
+bpe merger: 446.055s
+main time: 738.310s
+serilizing time: 0.012s
+      738.50 real       728.77 user         6.89 sys
+          6096830464  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             2371293  page reclaims
+                 969  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                  12  messages sent
+                  12  messages received
+                  12  signals received
+                 305  voluntary context switches
+              143371  involuntary context switches
+           230445156  instructions retired
+           109032799  cycles elapsed
+            12517880  peak memory footprint
+
+[Running] .venv/bin/python -u "/Users/jinxin/projects/assignment1-basics/cs336_basics/experiments/tokenizer_experiments.py"
+bpe init vocab: 0.000s
+bpe tokenizer: prepare chunk0: 0.336s
+bpe tokenizer: process chunk0: 28.615s
+bpe tokenizer: prepare chunk1: 0.243s
+bpe tokenizer: process chunk1: 28.411s
+bpe tokenizer: prepare chunk2: 0.226s
+bpe tokenizer: process chunk2: 28.479s
+bpe tokenizer: prepare chunk3: 0.299s
+bpe tokenizer: process chunk3: 28.590s
+bpe tokenizer: prepare chunk4: 0.381s
+bpe tokenizer: process chunk4: 28.529s
+bpe tokenizer: prepare chunk5: 0.294s
+bpe tokenizer: process chunk5: 28.593s
+bpe tokenizer: prepare chunk6: 0.273s
+bpe tokenizer: process chunk6: 28.577s
+bpe tokenizer: prepare chunk7: 0.301s
+bpe tokenizer: process chunk7: 28.940s
+bpe tokenizer: prepare chunk8: 0.256s
+bpe tokenizer: process chunk8: 28.841s
+bpe tokenizer: prepare chunk9: 0.294s
+bpe tokenizer: process chunk9: 28.703s
+bpe pre-tokenizing: 289.200s
+bpe merger: vocab size:257 elapsed time:0.000s rss:1560.672MB
+bpe merger: vocab size:400 elapsed time:10.146s rss:731.234MB
+bpe merger: vocab size:600 elapsed time:22.928s rss:307.062MB
+bpe merger: vocab size:800 elapsed time:35.322s rss:308.906MB
+bpe merger: vocab size:1000 elapsed time:46.841s rss:309.156MB
+bpe merger: vocab size:1200 elapsed time:58.470s rss:309.891MB
+bpe merger: vocab size:1400 elapsed time:69.482s rss:309.969MB
+bpe merger: vocab size:1600 elapsed time:80.232s rss:309.969MB
+bpe merger: vocab size:1800 elapsed time:91.028s rss:309.969MB
+bpe merger: vocab size:2000 elapsed time:101.606s rss:309.969MB
+bpe merger: vocab size:2200 elapsed time:111.749s rss:309.969MB
+bpe merger: vocab size:2400 elapsed time:121.836s rss:309.969MB
+bpe merger: vocab size:2600 elapsed time:131.774s rss:309.969MB
+bpe merger: vocab size:2800 elapsed time:141.321s rss:310.547MB
+bpe merger: vocab size:3000 elapsed time:150.859s rss:310.547MB
+bpe merger: vocab size:3200 elapsed time:160.945s rss:310.547MB
+bpe merger: vocab size:3400 elapsed time:170.656s rss:310.547MB
+bpe merger: vocab size:3600 elapsed time:180.554s rss:310.547MB
+bpe merger: vocab size:3800 elapsed time:190.969s rss:310.547MB
+bpe merger: vocab size:4000 elapsed time:201.161s rss:310.547MB
+bpe merger: vocab size:4200 elapsed time:211.029s rss:310.547MB
+bpe merger: vocab size:4400 elapsed time:220.845s rss:310.547MB
+bpe merger: vocab size:4600 elapsed time:229.786s rss:310.547MB
+bpe merger: vocab size:4800 elapsed time:238.698s rss:310.547MB
+bpe merger: vocab size:5000 elapsed time:247.546s rss:310.547MB
+bpe merger: vocab size:5200 elapsed time:256.340s rss:310.547MB
+bpe merger: vocab size:5400 elapsed time:264.997s rss:310.547MB
+bpe merger: vocab size:5600 elapsed time:273.618s rss:310.547MB
+bpe merger: vocab size:5800 elapsed time:282.178s rss:310.547MB
+bpe merger: vocab size:6000 elapsed time:290.938s rss:310.547MB
+bpe merger: vocab size:6200 elapsed time:299.902s rss:310.547MB
+bpe merger: vocab size:6400 elapsed time:308.970s rss:310.547MB
+bpe merger: vocab size:6600 elapsed time:317.491s rss:310.547MB
+bpe merger: vocab size:6800 elapsed time:326.625s rss:313.062MB
+bpe merger: vocab size:7000 elapsed time:336.801s rss:313.062MB
+bpe merger: vocab size:7200 elapsed time:346.876s rss:313.062MB
+bpe merger: vocab size:7400 elapsed time:355.833s rss:313.062MB
+bpe merger: vocab size:7600 elapsed time:364.479s rss:313.062MB
+bpe merger: vocab size:7800 elapsed time:373.148s rss:313.062MB
+bpe merger: vocab size:8000 elapsed time:381.981s rss:313.062MB
+bpe merger: vocab size:8200 elapsed time:391.488s rss:313.062MB
+bpe merger: vocab size:8400 elapsed time:400.285s rss:313.062MB
+bpe merger: vocab size:8600 elapsed time:408.454s rss:313.062MB
+bpe merger: vocab size:8800 elapsed time:416.637s rss:313.062MB
+bpe merger: vocab size:9000 elapsed time:424.794s rss:313.062MB
+bpe merger: vocab size:9200 elapsed time:432.642s rss:313.062MB
+bpe merger: vocab size:9400 elapsed time:440.474s rss:313.062MB
+bpe merger: vocab size:9600 elapsed time:448.072s rss:313.062MB
+bpe merger: vocab size:9800 elapsed time:455.849s rss:313.062MB
+bpe merger: vocab size:10000 elapsed time:463.258s rss:313.062MB
+bpe merger: 463.258s
+main time: 752.458s
+dumping vocab.json into data/tinystoriesV2-train
+dumping merges.txt into data/tinystoriesV2-train
+serilizing time: 0.012s
+
 **(b) profiling:训练中最耗时的部分是什么?**
 
-答:
+答: merger
 
 ### Problem (train_bpe_expts_owt): BPE Training on OpenWebText (2 points) 📝
 
