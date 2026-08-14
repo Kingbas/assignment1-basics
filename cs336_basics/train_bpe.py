@@ -45,7 +45,7 @@ def init_vocab(special_tokens: list[str]) -> dict[int, bytes]:
 @timed('bpe pre-tokenizing')
 def bpe_tokenizer_worker(file_path: str, special_tokens: list[str], offset: tuple[int, int]):
     special_token_pattern = '|'.join(re.escape(special_token) for special_token in special_tokens)
-    token_count: dict[tuple(bytes), int] = {}
+    token_count: dict[tuple[bytes], int] = {}
     with open(file_path, 'rb') as f:
         f.seek(offset[0])
         with timed(f'bpe tokenizer: prepare chunk {offset[0]/1024/1024:.3f}MB:{offset[1]/1024/1024:.3f}MB'):
@@ -64,35 +64,77 @@ def bpe_tokenizer_worker(file_path: str, special_tokens: list[str], offset: tupl
     return token_count
 
 
-def bpe_tokenizer_merger(vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], pretrained_tokenization: dict[tuple, int], pair_token: dict[tuple[bytes, bytes], set[tuple[bytes]]]) -> dict[tuple, int]:
-    pair_count: dict[tuple[bytes, bytes], int] = {}
-    # 通过词频统计pair频率
-    for key in pretrained_tokenization.keys():
-        for i in range(len(key)-1):
-            pair = (key[i], key[i+1])
-            pair_count[pair] = pair_count.get(pair, 0) + pretrained_tokenization[key]
+def bpe_tokenizer_merger(vocab: dict[int, bytes],
+        merges: list[tuple[bytes, bytes]],
+        pretrained_tokenization: dict[tuple[bytes, ...], int],
+        pair_token: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]],
+        pair_count: dict[tuple[bytes, bytes], int]):
     # 如果没得合并了
     if len(pair_count) == 0:
-        return pretrained_tokenization
+        return
     # 找到频次最高的pairs，对pairs进行字典序排序，将字典序最大者添加进vocab
     best_pair = max(pair_count, key=lambda p: (pair_count[p], p))
-    vocab[len(vocab)] = b''.join(best_pair)
+    # 更新vocab和merges
+    merged_pair = b''.join(best_pair)
+    vocab[len(vocab)] = merged_pair
     merges.append(best_pair)
-    # 再次遍历pretrained_tokenization，在每一个key上应用刚才的merge
-    freq_temp: dict[tuple, int] = {}
-    for token, freq in pretrained_tokenization.items():
-        temp_list = []
-        i = 0
-        while i < len(token):
-            if i < len(token) - 1 and tuple([token[i], token[i+1]]) == best_pair:
-                temp_list.append(token[i] + token[i+1])
-                i = i + 2
-            else:
-                temp_list.append(token[i])
-                i = i + 1
-        freq_temp[tuple(temp_list)] = freq
-    return freq_temp
 
+    # 对于这个best_pair，要更新
+    # 更新pair_count
+    for token in pair_token[best_pair].copy():
+        # 词频
+        freq = pretrained_tokenization[token]
+        # 构造出merge后的token
+        i = 0
+        merging: list[bytes] = []
+        while i < len(token) - 1:
+            pair = (token[i], token[i+1])
+            if pair == best_pair:
+                merging.append(merged_pair)
+                i += 1
+            else:
+                merging.append(token[i])
+            i += 1
+        if i == len(token) - 1:
+            merging.append(token[i])
+        merged_token: tuple[bytes, ...] = tuple(merging)
+
+        assert b''.join(merged_token) == b''.join(token)
+        assert len(merged_token) < len(token)
+
+        # 更新pretrained_tokenization
+        # token变成merged_token
+        pretrained_tokenization[merged_token] = pretrained_tokenization[token]
+        del pretrained_tokenization[token]
+
+        # 更新pair_token 更新pair_count
+        # best_pair将不复存在
+        # 删除所有原token中pair的键值，将merged_token中所有pair的键值换为pair related_tokens
+        # 把原token中每个pair的计数减去词频
+        # 把merged_token中每个pair加上词频
+        i = 0
+        while i < len(token) - 1:
+            pair = (token[i], token[i+1])
+            pair_count[pair] -= freq
+            # 坑：具体例子：token = (a, a, a)，pair (a,a) 在 i=0 和 i=1 各出现一次。
+            # i=0：pair_token[(a,a)].remove(token) → 移除成功
+            # i=1：pair_token[(a,a)].remove(token) → KeyError，它已经不在里面了
+            # 因此要用discard
+            pair_token[pair].discard(token)
+            if pair_count[pair] == 0:
+                del pair_count[pair]
+                del pair_token[pair]
+            i += 1
+        i = 0
+        while i < len(merged_token) - 1:
+            pair = (merged_token[i], merged_token[i+1])
+            pair_count[pair] = pair_count.get(pair, 0) + freq
+            pair_token[pair] = pair_token.get(pair, set())
+            pair_token[pair].add(merged_token)
+            i += 1
+    
+    assert best_pair not in pair_token
+    assert best_pair not in pair_count
 
 def bpe_serializer(vocab: dict[int, bytes], merges, out_path='data'):
     gpt2_encoder = gpt2_bytes_to_unicode()
@@ -128,27 +170,28 @@ def bpe_tokenizer_main(input_path: str, vocab_size: int, special_tokens: list[st
         with timed('bpe pre-tokenizer: convert str to bytes'):
             pretrained_tokenization = {tuple(bytes([x]) for x in k.encode('UTF-8')):v for k, v in token_count.items()}
 
-
-        t0 = time.perf_counter()
-        print(f'bpe merger: vocab size:{len(vocab)} elapsed time:{time.perf_counter() - t0:.3f}s rss:{psutil.Process().memory_info().rss/1024/1024:.3f}MB')
-        with timed('bpe main merger'):
+        with timed('bpe setting up pair:tokens dict'):
             # 建立 pair: set(tokens) 的字典
-            pair_token: dict[tuple[bytes, bytes], set[tuple[bytes]]] = {}
+            pair_token: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]] = {}
             for token in pretrained_tokenization.keys():
                 for i in range(len(token) - 1):
                     pair = (token[i], token[i+1])
-                    pair_token[pair] = pair_token.get(pair, set([token])) | set([token])
-            
+                    pair_token[pair] = pair_token.get(pair, set())
+                    pair_token[pair].add(token)
+        with timed('bpe setting up pair:freq dict'):
             # 建立 pair: freq
-            pair_count = {}
+            pair_count: dict[tuple[bytes, bytes], int] = {}
             for key in pretrained_tokenization.keys():
                 for i in range(len(key)-1):
                     pair = (key[i], key[i+1])
                     pair_count[pair] = pair_count.get(pair, 0) + pretrained_tokenization[key]
-
+        
+        t0 = time.perf_counter()
+        print(f'bpe merger: vocab size:{len(vocab)} elapsed time:{time.perf_counter() - t0:.3f}s rss:{psutil.Process().memory_info().rss/1024/1024:.3f}MB')
+        with timed('bpe main merger'):
             while len(vocab) < vocab_size:
                 before_vocab_size = len(vocab)
-                pretrained_tokenization = bpe_tokenizer_merger(vocab, merges, pretrained_tokenization, pair_token)
+                bpe_tokenizer_merger(vocab, merges, pretrained_tokenization, pair_token, pair_count)
                 after_vocab_size = len(vocab)
                 if before_vocab_size == after_vocab_size:
                     break
