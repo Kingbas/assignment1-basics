@@ -176,6 +176,11 @@ def bpe_tokenizer_main(input_path: str, vocab_size: int, special_tokens: list[st
             for token in pretrained_tokenization.keys():
                 for i in range(len(token) - 1):
                     pair = (token[i], token[i+1])
+                    # 如果每次都新建一个set的话开销是100倍，以tinystoriesV2-train为例
+                    # before
+                    #bpe setting up pair:tokens dict: 4.253s rss:79.328MB
+                    # after
+                    # bpe setting up pair:tokens dict: 0.054s rss:79.516MB
                     pair_token[pair] = pair_token.get(pair, set())
                     pair_token[pair].add(token)
         with timed('bpe setting up pair:freq dict'):

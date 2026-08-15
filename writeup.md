@@ -177,6 +177,235 @@ dumping vocab.json into data/tinystoriesV2-train
 dumping merges.txt into data/tinystoriesV2-train
 serilizing time: 0.012s
 
+bpe init vocab: 0.000s rss:29.047MB
+bpe tokenizer: prepare chunk 1274.732MB:1487.186MB: 2.488s rss:341.172MB
+bpe tokenizer: process chunk: 19.910s rss:270.344MB
+bpe pre-tokenizing: 22.480s rss:271.031MB
+bpe tokenizer: prepare chunk 1487.186MB:1699.641MB: 3.328s rss:356.156MB
+bpe tokenizer: process chunk: 19.549s rss:528.219MB
+bpe pre-tokenizing: 22.977s rss:276.172MB
+bpe tokenizer: prepare chunk 212.455MB:424.910MB: 2.904s rss:306.469MB
+bpe tokenizer: process chunk: 19.342s rss:275.234MB
+bpe pre-tokenizing: 22.342s rss:276.156MB
+bpe tokenizer: prepare chunk 1062.275MB:1274.732MB: 2.510s rss:320.812MB
+bpe tokenizer: process chunk: 20.078s rss:270.250MB
+bpe pre-tokenizing: 22.673s rss:271.969MB
+bpe tokenizer: prepare chunk 1699.641MB:1912.097MB: 2.479s rss:327.703MB
+bpe tokenizer: process chunk: 19.935s rss:271.594MB
+bpe pre-tokenizing: 22.521s rss:272.047MB
+bpe tokenizer: prepare chunk 1912.097MB:2124.551MB: 2.882s rss:302.766MB
+bpe tokenizer: process chunk: 19.866s rss:337.250MB
+bpe pre-tokenizing: 22.840s rss:276.766MB
+bpe tokenizer: prepare chunk 0.000MB:212.455MB: 0.424s rss:1525.891MB
+bpe tokenizer: process chunk: 18.968s rss:239.344MB
+bpe pre-tokenizing: 19.424s rss:270.812MB
+bpe tokenizer: prepare chunk 424.910MB:637.366MB: 2.917s rss:301.578MB
+bpe tokenizer: process chunk: 19.693s rss:274.922MB
+bpe pre-tokenizing: 22.699s rss:274.828MB
+bpe tokenizer: prepare chunk 637.366MB:849.821MB: 2.382s rss:351.938MB
+bpe tokenizer: process chunk: 20.148s rss:270.969MB
+bpe pre-tokenizing: 22.653s rss:271.828MB
+bpe tokenizer: prepare chunk 849.821MB:1062.275MB: 3.275s rss:606.328MB
+bpe tokenizer: process chunk: 19.894s rss:764.344MB
+bpe pre-tokenizing: 23.276s rss:276.156MB
+pre tokenizing total time: 23.411s rss:44.078MB
+bpe pre-tokenizer: convert str to bytes: 0.034s rss:61.469MB
+bpe setting up pair:tokens dict: 4.253s rss:79.328MB
+bpe setting up pair:freq dict: 0.046s rss:79.484MB
+bpe merger: vocab size:257 elapsed time:0.000s rss:79.500MB
+bpe merger: vocab size:400 elapsed time:0.536s rss:101.781MB
+bpe merger: vocab size:600 elapsed time:0.748s rss:111.484MB
+bpe merger: vocab size:800 elapsed time:0.980s rss:114.453MB
+bpe merger: vocab size:1000 elapsed time:1.229s rss:117.672MB
+bpe merger: vocab size:1200 elapsed time:1.485s rss:118.812MB
+bpe merger: vocab size:1400 elapsed time:1.767s rss:119.594MB
+bpe merger: vocab size:1600 elapsed time:2.071s rss:120.328MB
+bpe merger: vocab size:1800 elapsed time:2.399s rss:121.172MB
+bpe merger: vocab size:2000 elapsed time:2.745s rss:121.906MB
+bpe merger: vocab size:2200 elapsed time:3.107s rss:122.469MB
+bpe merger: vocab size:2400 elapsed time:3.492s rss:123.047MB
+bpe merger: vocab size:2600 elapsed time:3.929s rss:123.516MB
+bpe merger: vocab size:2800 elapsed time:4.353s rss:123.875MB
+bpe merger: vocab size:3000 elapsed time:4.746s rss:124.172MB
+bpe merger: vocab size:3200 elapsed time:5.117s rss:124.453MB
+bpe merger: vocab size:3400 elapsed time:5.492s rss:124.656MB
+bpe merger: vocab size:3600 elapsed time:5.869s rss:124.812MB
+bpe merger: vocab size:3800 elapsed time:6.263s rss:125.016MB
+bpe merger: vocab size:4000 elapsed time:6.659s rss:125.203MB
+bpe merger: vocab size:4200 elapsed time:7.051s rss:125.344MB
+bpe merger: vocab size:4400 elapsed time:7.455s rss:125.531MB
+bpe merger: vocab size:4600 elapsed time:7.857s rss:125.766MB
+bpe merger: vocab size:4800 elapsed time:8.261s rss:125.938MB
+bpe merger: vocab size:5000 elapsed time:8.674s rss:126.031MB
+bpe merger: vocab size:5200 elapsed time:9.094s rss:126.203MB
+bpe merger: vocab size:5400 elapsed time:9.513s rss:126.391MB
+bpe merger: vocab size:5600 elapsed time:9.936s rss:126.562MB
+bpe merger: vocab size:5800 elapsed time:10.370s rss:131.750MB
+bpe merger: vocab size:6000 elapsed time:10.819s rss:131.906MB
+bpe merger: vocab size:6200 elapsed time:11.252s rss:132.047MB
+bpe merger: vocab size:6400 elapsed time:11.696s rss:132.156MB
+bpe merger: vocab size:6600 elapsed time:12.143s rss:132.281MB
+bpe merger: vocab size:6800 elapsed time:12.592s rss:132.422MB
+bpe merger: vocab size:7000 elapsed time:13.046s rss:132.594MB
+bpe merger: vocab size:7200 elapsed time:13.505s rss:132.719MB
+bpe merger: vocab size:7400 elapsed time:13.957s rss:132.812MB
+bpe merger: vocab size:7600 elapsed time:14.416s rss:132.938MB
+bpe merger: vocab size:7800 elapsed time:14.875s rss:133.016MB
+bpe merger: vocab size:8000 elapsed time:15.334s rss:133.109MB
+bpe merger: vocab size:8200 elapsed time:15.811s rss:133.281MB
+bpe merger: vocab size:8400 elapsed time:16.280s rss:133.375MB
+bpe merger: vocab size:8600 elapsed time:16.797s rss:133.469MB
+bpe merger: vocab size:8800 elapsed time:17.273s rss:133.562MB
+bpe merger: vocab size:9000 elapsed time:17.757s rss:133.656MB
+bpe merger: vocab size:9200 elapsed time:18.236s rss:133.719MB
+bpe merger: vocab size:9400 elapsed time:18.761s rss:133.812MB
+bpe merger: vocab size:9600 elapsed time:19.321s rss:133.906MB
+bpe merger: vocab size:9800 elapsed time:19.893s rss:133.969MB
+bpe merger: vocab size:10000 elapsed time:20.408s rss:134.016MB
+bpe main merger: 20.408s rss:134.016MB
+bpe merger: vocab size:10000 elapsed time:20.408s rss:134.016MB
+bpe main time: 48.174s rss:134.016MB
+dumping vocab.json into data/tinystoriesV2_train
+dumping merges.txt into data/tinystoriesV2_train
+bpe serilizing time: 0.011s rss:135.156MB
+top 20 longest tokens are 
+[ responsibility]
+[ disappointment]
+[ accomplishment]
+[ unfortunately]
+[ understanding]
+[ uncomfortable]
+[ neighbourhood]
+[ granddaughter]
+[ extraordinary]
+[ encouragement]
+[ determination]
+[ congratulated]
+[ compassionate]
+[ Unfortunately]
+[Unfortunately]
+[<|endoftext|>]
+[ veterinarian]
+[ surroundings]
+[ successfully]
+[ strawberries]
+maxrss is 136.109MB
+
+
+bpe init vocab: 0.000s rss:27.922MB
+bpe tokenizer: prepare chunk 1699.641MB:1912.097MB: 3.138s rss:487.156MB
+bpe tokenizer: process chunk: 20.686s rss:298.875MB
+bpe pre-tokenizing: 24.207s rss:276.047MB
+bpe tokenizer: prepare chunk 849.821MB:1062.275MB: 3.874s rss:921.844MB
+bpe tokenizer: process chunk: 20.302s rss:875.562MB
+bpe pre-tokenizing: 24.493s rss:275.844MB
+bpe tokenizer: prepare chunk 1912.097MB:2124.551MB: 2.689s rss:252.328MB
+bpe tokenizer: process chunk: 21.124s rss:262.516MB
+bpe pre-tokenizing: 23.889s rss:271.375MB
+bpe tokenizer: prepare chunk 1274.732MB:1487.186MB: 3.149s rss:482.984MB
+bpe tokenizer: process chunk: 20.736s rss:305.047MB
+bpe pre-tokenizing: 24.257s rss:275.453MB
+bpe tokenizer: prepare chunk 1487.186MB:1699.641MB: 3.690s rss:632.109MB
+bpe tokenizer: process chunk: 20.740s rss:572.469MB
+bpe pre-tokenizing: 24.738s rss:277.469MB
+bpe tokenizer: prepare chunk 637.366MB:849.821MB: 2.717s rss:250.641MB
+bpe tokenizer: process chunk: 21.386s rss:263.547MB
+bpe pre-tokenizing: 24.220s rss:271.578MB
+bpe tokenizer: prepare chunk 1062.275MB:1274.732MB: 3.284s rss:406.812MB
+bpe tokenizer: process chunk: 20.903s rss:309.516MB
+bpe pre-tokenizing: 24.500s rss:277.094MB
+bpe tokenizer: prepare chunk 424.910MB:637.366MB: 2.608s rss:283.391MB
+bpe tokenizer: process chunk: 21.183s rss:263.859MB
+bpe pre-tokenizing: 23.882s rss:270.516MB
+bpe tokenizer: prepare chunk 0.000MB:212.455MB: 0.356s rss:1525.609MB
+bpe tokenizer: process chunk: 21.454s rss:245.688MB
+bpe pre-tokenizing: 21.849s rss:271.109MB
+bpe tokenizer: prepare chunk 212.455MB:424.910MB: 2.601s rss:266.828MB
+bpe tokenizer: process chunk: 21.386s rss:263.938MB
+bpe pre-tokenizing: 24.089s rss:271.844MB
+pre tokenizing total time: 24.896s rss:44.156MB
+bpe pre-tokenizer: convert str to bytes: 0.032s rss:61.234MB
+bpe setting up pair:tokens dict: 0.054s rss:79.516MB
+bpe setting up pair:freq dict: 0.037s rss:79.688MB
+bpe merger: vocab size:257 elapsed time:0.000s rss:79.703MB
+bpe merger: vocab size:400 elapsed time:0.518s rss:103.938MB
+bpe merger: vocab size:600 elapsed time:0.726s rss:113.594MB
+bpe merger: vocab size:800 elapsed time:0.959s rss:116.578MB
+bpe merger: vocab size:1000 elapsed time:1.206s rss:120.672MB
+bpe merger: vocab size:1200 elapsed time:1.471s rss:121.828MB
+bpe merger: vocab size:1400 elapsed time:1.756s rss:122.641MB
+bpe merger: vocab size:1600 elapsed time:2.051s rss:123.344MB
+bpe merger: vocab size:1800 elapsed time:2.376s rss:124.203MB
+bpe merger: vocab size:2000 elapsed time:2.725s rss:124.938MB
+bpe merger: vocab size:2200 elapsed time:3.084s rss:125.500MB
+bpe merger: vocab size:2400 elapsed time:3.460s rss:126.078MB
+bpe merger: vocab size:2600 elapsed time:3.856s rss:126.547MB
+bpe merger: vocab size:2800 elapsed time:4.270s rss:126.906MB
+bpe merger: vocab size:3000 elapsed time:4.716s rss:127.203MB
+bpe merger: vocab size:3200 elapsed time:5.089s rss:127.484MB
+bpe merger: vocab size:3400 elapsed time:5.469s rss:127.703MB
+bpe merger: vocab size:3600 elapsed time:5.850s rss:127.859MB
+bpe merger: vocab size:3800 elapsed time:6.229s rss:128.062MB
+bpe merger: vocab size:4000 elapsed time:6.617s rss:128.250MB
+bpe merger: vocab size:4200 elapsed time:7.014s rss:128.391MB
+bpe merger: vocab size:4400 elapsed time:7.433s rss:128.578MB
+bpe merger: vocab size:4600 elapsed time:7.892s rss:128.797MB
+bpe merger: vocab size:4800 elapsed time:8.325s rss:128.984MB
+bpe merger: vocab size:5000 elapsed time:8.793s rss:129.078MB
+bpe merger: vocab size:5200 elapsed time:9.222s rss:129.250MB
+bpe merger: vocab size:5400 elapsed time:9.657s rss:129.438MB
+bpe merger: vocab size:5600 elapsed time:10.086s rss:129.609MB
+bpe merger: vocab size:5800 elapsed time:10.515s rss:134.797MB
+bpe merger: vocab size:6000 elapsed time:10.968s rss:134.953MB
+bpe merger: vocab size:6200 elapsed time:11.447s rss:135.078MB
+bpe merger: vocab size:6400 elapsed time:11.901s rss:135.203MB
+bpe merger: vocab size:6600 elapsed time:12.350s rss:135.328MB
+bpe merger: vocab size:6800 elapsed time:12.795s rss:135.469MB
+bpe merger: vocab size:7000 elapsed time:13.271s rss:135.641MB
+bpe merger: vocab size:7200 elapsed time:13.728s rss:135.766MB
+bpe merger: vocab size:7400 elapsed time:14.176s rss:135.859MB
+bpe merger: vocab size:7600 elapsed time:14.627s rss:135.984MB
+bpe merger: vocab size:7800 elapsed time:15.081s rss:136.062MB
+bpe merger: vocab size:8000 elapsed time:15.555s rss:136.141MB
+bpe merger: vocab size:8200 elapsed time:16.021s rss:136.312MB
+bpe merger: vocab size:8400 elapsed time:16.486s rss:136.406MB
+bpe merger: vocab size:8600 elapsed time:16.946s rss:136.484MB
+bpe merger: vocab size:8800 elapsed time:17.415s rss:136.578MB
+bpe merger: vocab size:9000 elapsed time:17.901s rss:136.688MB
+bpe merger: vocab size:9200 elapsed time:18.375s rss:136.750MB
+bpe merger: vocab size:9400 elapsed time:18.886s rss:136.844MB
+bpe merger: vocab size:9600 elapsed time:19.359s rss:136.938MB
+bpe merger: vocab size:9800 elapsed time:19.833s rss:137.000MB
+bpe merger: vocab size:10000 elapsed time:20.312s rss:137.047MB
+bpe main merger: 20.312s rss:137.047MB
+bpe merger: vocab size:10000 elapsed time:20.312s rss:137.047MB
+bpe main time: 45.353s rss:137.047MB
+dumping vocab.json into data/tinystoriesV2_train
+dumping merges.txt into data/tinystoriesV2_train
+bpe serilizing time: 0.011s rss:138.312MB
+top 20 longest tokens are 
+[ responsibility]
+[ disappointment]
+[ accomplishment]
+[ unfortunately]
+[ understanding]
+[ uncomfortable]
+[ neighbourhood]
+[ granddaughter]
+[ extraordinary]
+[ encouragement]
+[ determination]
+[ congratulated]
+[ compassionate]
+[ Unfortunately]
+[Unfortunately]
+[<|endoftext|>]
+[ veterinarian]
+[ surroundings]
+[ successfully]
+[ strawberries]
+maxrss is 139.344MB
+
 **(b) profiling:训练中最耗时的部分是什么?**
 
 答: merger
@@ -186,6 +415,502 @@ serilizing time: 0.012s
 **(a) OWT 词表中最长的 token?合理吗?**
 
 答:
+
+
+bpe init vocab: 0.000s rss:28.031MB
+bpe tokenizer: prepare chunk 568.423MB:682.102MB: 1.489s rss:591.250MB
+bpe tokenizer: process chunk: 10.990s rss:167.078MB
+bpe pre-tokenizing: 12.580s rss:279.828MB
+bpe tokenizer: prepare chunk 1591.569MB:1705.243MB: 0.277s rss:899.000MB
+bpe tokenizer: process chunk: 12.025s rss:277.234MB
+bpe pre-tokenizing: 12.329s rss:282.375MB
+bpe tokenizer: prepare chunk 2728.391MB:2842.072MB: 0.304s rss:880.719MB
+bpe tokenizer: process chunk: 12.473s rss:263.062MB
+bpe pre-tokenizing: 12.791s rss:288.641MB
+bpe tokenizer: prepare chunk 3751.536MB:3865.222MB: 0.326s rss:877.469MB
+bpe tokenizer: process chunk: 12.214s rss:248.016MB
+bpe pre-tokenizing: 12.611s rss:280.719MB
+bpe tokenizer: prepare chunk 4888.364MB:5002.056MB: 0.526s rss:866.562MB
+bpe tokenizer: process chunk: 15.114s rss:255.641MB
+bpe pre-tokenizing: 15.653s rss:285.672MB
+bpe tokenizer: prepare chunk 5911.510MB:6025.194MB: 1.178s rss:778.906MB
+bpe tokenizer: process chunk: 13.872s rss:249.297MB
+bpe pre-tokenizing: 15.077s rss:282.281MB
+bpe tokenizer: prepare chunk 7162.025MB:7275.706MB: 1.091s rss:771.156MB
+bpe tokenizer: process chunk: 14.945s rss:213.969MB
+bpe pre-tokenizing: 16.191s rss:229.188MB
+bpe tokenizer: prepare chunk 8298.850MB:8412.540MB: 0.264s rss:876.156MB
+bpe tokenizer: process chunk: 16.248s rss:263.734MB
+bpe pre-tokenizing: 16.522s rss:287.172MB
+bpe tokenizer: prepare chunk 9208.311MB:9322.005MB: 0.348s rss:888.656MB
+bpe tokenizer: process chunk: 17.933s rss:265.500MB
+bpe pre-tokenizing: 18.292s rss:288.047MB
+bpe tokenizer: prepare chunk 10345.164MB:10458.823MB: 0.451s rss:866.469MB
+bpe tokenizer: process chunk: 15.824s rss:261.406MB
+bpe pre-tokenizing: 16.288s rss:287.328MB
+bpe tokenizer: prepare chunk 341.051MB:454.732MB: 0.299s rss:830.500MB
+bpe tokenizer: process chunk: 11.200s rss:285.375MB
+bpe pre-tokenizing: 11.564s rss:286.312MB
+bpe tokenizer: prepare chunk 1477.882MB:1591.569MB: 0.550s rss:844.500MB
+bpe tokenizer: process chunk: 12.185s rss:275.641MB
+bpe pre-tokenizing: 12.759s rss:281.859MB
+bpe tokenizer: prepare chunk 2501.058MB:2614.713MB: 0.250s rss:883.562MB
+bpe tokenizer: process chunk: 12.565s rss:262.828MB
+bpe pre-tokenizing: 12.835s rss:289.953MB
+bpe tokenizer: prepare chunk 3637.854MB:3751.536MB: 0.448s rss:806.422MB
+bpe tokenizer: process chunk: 12.088s rss:256.688MB
+bpe pre-tokenizing: 12.549s rss:282.188MB
+bpe tokenizer: prepare chunk 4774.684MB:4888.364MB: 0.760s rss:824.172MB
+bpe tokenizer: process chunk: 15.121s rss:253.375MB
+bpe pre-tokenizing: 15.895s rss:285.188MB
+bpe tokenizer: prepare chunk 5797.826MB:5911.510MB: 1.143s rss:819.047MB
+bpe tokenizer: process chunk: 13.938s rss:247.344MB
+bpe pre-tokenizing: 15.096s rss:280.422MB
+bpe tokenizer: prepare chunk 6934.678MB:7048.338MB: 0.810s rss:807.438MB
+bpe tokenizer: process chunk: 15.192s rss:221.656MB
+bpe pre-tokenizing: 16.032s rss:273.297MB
+bpe tokenizer: prepare chunk 8071.520MB:8185.166MB: 0.661s rss:860.266MB
+bpe tokenizer: process chunk: 16.692s rss:263.859MB
+bpe pre-tokenizing: 17.367s rss:287.875MB
+bpe tokenizer: prepare chunk 9322.005MB:9435.686MB: 0.855s rss:446.078MB
+bpe tokenizer: process chunk: 17.440s rss:256.703MB
+bpe pre-tokenizing: 18.305s rss:281.375MB
+bpe tokenizer: prepare chunk 10458.823MB:10572.556MB: 0.489s rss:734.172MB
+bpe tokenizer: process chunk: 15.756s rss:269.188MB
+bpe pre-tokenizing: 16.255s rss:289.391MB
+bpe tokenizer: prepare chunk 227.367MB:341.051MB: 0.303s rss:830.109MB
+bpe tokenizer: process chunk: 11.074s rss:285.359MB
+bpe pre-tokenizing: 11.430s rss:286.188MB
+bpe tokenizer: prepare chunk 1250.519MB:1364.204MB: 0.367s rss:620.422MB
+bpe tokenizer: process chunk: 12.326s rss:268.250MB
+bpe pre-tokenizing: 12.712s rss:279.344MB
+bpe tokenizer: prepare chunk 2387.343MB:2501.058MB: 0.237s rss:884.906MB
+bpe tokenizer: process chunk: 12.597s rss:256.094MB
+bpe pre-tokenizing: 12.848s rss:287.516MB
+bpe tokenizer: prepare chunk 3524.174MB:3637.854MB: 0.270s rss:874.125MB
+bpe tokenizer: process chunk: 12.568s rss:249.703MB
+bpe pre-tokenizing: 12.853s rss:280.609MB
+bpe tokenizer: prepare chunk 4661.000MB:4774.684MB: 0.914s rss:636.969MB
+bpe tokenizer: process chunk: 15.314s rss:254.656MB
+bpe pre-tokenizing: 16.396s rss:274.344MB
+bpe tokenizer: prepare chunk 6025.194MB:6138.886MB: 0.923s rss:731.609MB
+bpe tokenizer: process chunk: 13.727s rss:248.688MB
+bpe pre-tokenizing: 14.677s rss:280.953MB
+bpe tokenizer: prepare chunk 7048.338MB:7162.025MB: 1.120s rss:713.375MB
+bpe tokenizer: process chunk: 14.982s rss:216.188MB
+bpe pre-tokenizing: 16.171s rss:266.859MB
+bpe tokenizer: prepare chunk 8185.166MB:8298.850MB: 0.376s rss:878.062MB
+bpe tokenizer: process chunk: 16.744s rss:259.953MB
+bpe pre-tokenizing: 17.131s rss:284.984MB
+bpe tokenizer: prepare chunk 9435.686MB:9549.367MB: 0.777s rss:799.297MB
+bpe tokenizer: process chunk: 17.894s rss:239.828MB
+bpe pre-tokenizing: 18.702s rss:272.750MB
+bpe tokenizer: prepare chunk 10572.556MB:10686.193MB: 0.741s rss:855.422MB
+bpe tokenizer: process chunk: 15.299s rss:285.609MB
+bpe pre-tokenizing: 16.046s rss:295.500MB
+bpe tokenizer: prepare chunk 682.102MB:795.785MB: 1.420s rss:565.547MB
+bpe tokenizer: process chunk: 11.175s rss:154.641MB
+bpe pre-tokenizing: 12.706s rss:279.422MB
+bpe tokenizer: prepare chunk 1705.243MB:1818.928MB: 0.501s rss:361.438MB
+bpe tokenizer: process chunk: 12.061s rss:282.953MB
+bpe pre-tokenizing: 12.579s rss:283.938MB
+bpe tokenizer: prepare chunk 2842.072MB:2955.810MB: 0.372s rss:879.734MB
+bpe tokenizer: process chunk: 12.885s rss:154.672MB
+bpe pre-tokenizing: 13.294s rss:250.234MB
+bpe tokenizer: prepare chunk 3978.906MB:4092.586MB: 0.315s rss:872.969MB
+bpe tokenizer: process chunk: 12.447s rss:87.422MB
+bpe pre-tokenizing: 12.832s rss:230.172MB
+bpe tokenizer: prepare chunk 5115.729MB:5229.415MB: 0.597s rss:856.578MB
+bpe tokenizer: process chunk: 15.658s rss:59.953MB
+bpe pre-tokenizing: 16.345s rss:220.781MB
+bpe tokenizer: prepare chunk 6252.558MB:6366.245MB: 0.363s rss:862.125MB
+bpe tokenizer: process chunk: 14.336s rss:55.656MB
+bpe pre-tokenizing: 14.805s rss:217.797MB
+bpe tokenizer: prepare chunk 7389.390MB:7503.074MB: 0.358s rss:840.875MB
+bpe tokenizer: process chunk: 15.038s rss:140.312MB
+bpe pre-tokenizing: 15.444s rss:242.266MB
+bpe tokenizer: prepare chunk 8412.540MB:8526.216MB: 1.207s rss:830.953MB
+bpe tokenizer: process chunk: 16.749s rss:174.297MB
+bpe pre-tokenizing: 18.003s rss:249.734MB
+bpe tokenizer: prepare chunk 9549.367MB:9663.044MB: 1.048s rss:837.156MB
+bpe tokenizer: process chunk: 17.184s rss:112.812MB
+bpe pre-tokenizing: 18.344s rss:229.719MB
+bpe tokenizer: prepare chunk 10686.193MB:10799.874MB: 0.627s rss:681.938MB
+bpe tokenizer: process chunk: 14.918s rss:293.172MB
+bpe pre-tokenizing: 15.548s rss:297.469MB
+bpe tokenizer: prepare chunk 113.685MB:227.367MB: 0.291s rss:830.016MB
+bpe tokenizer: process chunk: 11.212s rss:284.219MB
+bpe pre-tokenizing: 11.573s rss:285.688MB
+bpe tokenizer: prepare chunk 1364.204MB:1477.882MB: 0.694s rss:814.844MB
+bpe tokenizer: process chunk: 12.354s rss:279.438MB
+bpe pre-tokenizing: 13.068s rss:284.375MB
+bpe tokenizer: prepare chunk 2614.713MB:2728.391MB: 0.365s rss:903.109MB
+bpe tokenizer: process chunk: 13.140s rss:239.484MB
+bpe pre-tokenizing: 13.521s rss:280.141MB
+bpe tokenizer: prepare chunk 3865.222MB:3978.906MB: 0.389s rss:866.703MB
+bpe tokenizer: process chunk: 12.507s rss:173.953MB
+bpe pre-tokenizing: 12.922s rss:252.359MB
+bpe tokenizer: prepare chunk 5002.056MB:5115.729MB: 0.390s rss:856.781MB
+bpe tokenizer: process chunk: 15.451s rss:154.156MB
+bpe pre-tokenizing: 15.930s rss:245.016MB
+bpe tokenizer: prepare chunk 6138.886MB:6252.558MB: 0.621s rss:855.719MB
+bpe tokenizer: process chunk: 14.044s rss:196.547MB
+bpe pre-tokenizing: 14.755s rss:258.922MB
+bpe tokenizer: prepare chunk 7275.706MB:7389.390MB: 0.971s rss:831.703MB
+bpe tokenizer: process chunk: 15.184s rss:142.406MB
+bpe pre-tokenizing: 16.188s rss:244.781MB
+bpe tokenizer: prepare chunk 8526.216MB:8639.902MB: 1.243s rss:778.781MB
+bpe tokenizer: process chunk: 16.633s rss:175.078MB
+bpe pre-tokenizing: 17.959s rss:252.062MB
+bpe tokenizer: prepare chunk 9663.044MB:9776.728MB: 1.119s rss:855.188MB
+bpe tokenizer: process chunk: 17.278s rss:76.938MB
+bpe pre-tokenizing: 18.492s rss:229.641MB
+bpe tokenizer: prepare chunk 10913.557MB:11027.238MB: 0.870s rss:858.656MB
+bpe tokenizer: process chunk: 14.437s rss:294.891MB
+bpe pre-tokenizing: 15.310s rss:296.531MB
+bpe tokenizer: prepare chunk 795.785MB:909.468MB: 1.475s rss:567.938MB
+bpe tokenizer: process chunk: 11.125s rss:160.828MB
+bpe pre-tokenizing: 12.701s rss:280.625MB
+bpe tokenizer: prepare chunk 1818.928MB:1932.610MB: 1.053s rss:530.766MB
+bpe tokenizer: process chunk: 12.055s rss:296.906MB
+bpe pre-tokenizing: 13.135s rss:289.375MB
+bpe tokenizer: prepare chunk 2955.810MB:3069.439MB: 0.954s rss:613.234MB
+bpe tokenizer: process chunk: 12.702s rss:128.609MB
+bpe pre-tokenizing: 13.850s rss:230.906MB
+bpe tokenizer: prepare chunk 4092.586MB:4206.266MB: 0.369s rss:832.953MB
+bpe tokenizer: process chunk: 12.394s rss:82.906MB
+bpe pre-tokenizing: 12.807s rss:231.188MB
+bpe tokenizer: prepare chunk 5343.113MB:5456.779MB: 0.890s rss:742.797MB
+bpe tokenizer: process chunk: 15.059s rss:79.812MB
+bpe pre-tokenizing: 15.992s rss:229.188MB
+bpe tokenizer: prepare chunk 6479.923MB:6593.623MB: 0.252s rss:879.219MB
+bpe tokenizer: process chunk: 14.884s rss:66.734MB
+bpe pre-tokenizing: 15.180s rss:224.109MB
+bpe tokenizer: prepare chunk 7616.751MB:7730.439MB: 0.552s rss:834.219MB
+bpe tokenizer: process chunk: 15.291s rss:60.000MB
+bpe pre-tokenizing: 15.900s rss:219.656MB
+bpe tokenizer: prepare chunk 8753.580MB:8867.264MB: 0.635s rss:862.547MB
+bpe tokenizer: process chunk: 17.094s rss:61.031MB
+bpe pre-tokenizing: 17.786s rss:221.484MB
+bpe tokenizer: prepare chunk 9890.410MB:10004.091MB: 0.355s rss:870.219MB
+bpe tokenizer: process chunk: 17.149s rss:57.922MB
+bpe pre-tokenizing: 17.650s rss:221.703MB
+bpe tokenizer: prepare chunk 11027.238MB:11140.921MB: 0.692s rss:855.156MB
+bpe tokenizer: process chunk: 14.074s rss:291.188MB
+bpe pre-tokenizing: 14.770s rss:298.000MB
+bpe tokenizer: prepare chunk 0.000MB:113.685MB: 0.330s rss:829.906MB
+bpe tokenizer: process chunk: 11.035s rss:285.953MB
+bpe pre-tokenizing: 11.391s rss:287.297MB
+bpe tokenizer: prepare chunk 1136.831MB:1250.519MB: 0.275s rss:901.375MB
+bpe tokenizer: process chunk: 12.092s rss:266.484MB
+bpe pre-tokenizing: 12.388s rss:279.891MB
+bpe tokenizer: prepare chunk 2273.699MB:2387.343MB: 0.244s rss:888.672MB
+bpe tokenizer: process chunk: 12.428s rss:248.484MB
+bpe pre-tokenizing: 12.686s rss:285.391MB
+bpe tokenizer: prepare chunk 3410.493MB:3524.174MB: 0.356s rss:880.953MB
+bpe tokenizer: process chunk: 12.215s rss:253.141MB
+bpe pre-tokenizing: 12.581s rss:284.016MB
+bpe tokenizer: prepare chunk 4547.325MB:4661.000MB: 0.351s rss:876.375MB
+bpe tokenizer: process chunk: 15.125s rss:222.828MB
+bpe pre-tokenizing: 15.491s rss:273.688MB
+bpe tokenizer: prepare chunk 5684.156MB:5797.826MB: 0.226s rss:883.188MB
+bpe tokenizer: process chunk: 14.298s rss:213.734MB
+bpe pre-tokenizing: 14.546s rss:271.234MB
+bpe tokenizer: prepare chunk 6820.971MB:6934.678MB: 0.293s rss:881.188MB
+bpe tokenizer: process chunk: 15.308s rss:202.953MB
+bpe pre-tokenizing: 15.626s rss:269.703MB
+bpe tokenizer: prepare chunk 7957.804MB:8071.520MB: 0.381s rss:878.125MB
+bpe tokenizer: process chunk: 16.561s rss:216.062MB
+bpe pre-tokenizing: 16.986s rss:272.391MB
+bpe tokenizer: prepare chunk 9094.632MB:9208.311MB: 0.341s rss:883.828MB
+bpe tokenizer: process chunk: 18.036s rss:227.344MB
+bpe pre-tokenizing: 18.402s rss:275.438MB
+bpe tokenizer: prepare chunk 10231.473MB:10345.164MB: 0.384s rss:881.000MB
+bpe tokenizer: process chunk: 15.814s rss:216.672MB
+bpe pre-tokenizing: 16.221s rss:273.422MB
+bpe tokenizer: prepare chunk 454.732MB:568.423MB: 1.418s rss:519.250MB
+bpe tokenizer: process chunk: 11.244s rss:153.078MB
+bpe pre-tokenizing: 12.776s rss:278.141MB
+bpe tokenizer: prepare chunk 1932.610MB:2046.293MB: 1.310s rss:698.297MB
+bpe tokenizer: process chunk: 11.797s rss:268.156MB
+bpe pre-tokenizing: 13.131s rss:265.594MB
+bpe tokenizer: prepare chunk 3183.121MB:3296.805MB: 0.729s rss:745.719MB
+bpe tokenizer: process chunk: 13.242s rss:79.312MB
+bpe pre-tokenizing: 14.074s rss:231.000MB
+bpe tokenizer: prepare chunk 4319.949MB:4433.636MB: 0.654s rss:859.109MB
+bpe tokenizer: process chunk: 12.773s rss:55.234MB
+bpe pre-tokenizing: 13.587s rss:220.828MB
+bpe tokenizer: prepare chunk 5456.779MB:5570.469MB: 0.701s rss:856.812MB
+bpe tokenizer: process chunk: 14.991s rss:93.609MB
+bpe pre-tokenizing: 15.737s rss:234.109MB
+bpe tokenizer: prepare chunk 6707.289MB:6820.971MB: 0.594s rss:853.719MB
+bpe tokenizer: process chunk: 14.645s rss:75.797MB
+bpe pre-tokenizing: 15.301s rss:229.016MB
+bpe tokenizer: prepare chunk 7730.439MB:7844.117MB: 0.480s rss:679.562MB
+bpe tokenizer: process chunk: 15.539s rss:70.797MB
+bpe pre-tokenizing: 16.127s rss:223.438MB
+bpe tokenizer: prepare chunk 8980.958MB:9094.632MB: 0.638s rss:863.953MB
+bpe tokenizer: process chunk: 16.952s rss:84.250MB
+bpe pre-tokenizing: 17.678s rss:236.828MB
+bpe tokenizer: prepare chunk 10117.790MB:10231.473MB: 0.553s rss:871.203MB
+bpe tokenizer: process chunk: 17.240s rss:63.031MB
+bpe pre-tokenizing: 17.867s rss:222.781MB
+bpe tokenizer: prepare chunk 11140.921MB:11254.616MB: 0.676s rss:835.422MB
+bpe tokenizer: process chunk: 13.016s rss:403.219MB
+bpe pre-tokenizing: 13.693s rss:403.219MB
+bpe tokenizer: prepare chunk 909.468MB:1023.151MB: 1.375s rss:564.359MB
+bpe tokenizer: process chunk: 11.360s rss:159.469MB
+bpe pre-tokenizing: 12.920s rss:278.984MB
+bpe tokenizer: prepare chunk 2159.975MB:2273.699MB: 1.109s rss:737.656MB
+bpe tokenizer: process chunk: 12.239s rss:93.453MB
+bpe pre-tokenizing: 13.473s rss:236.578MB
+bpe tokenizer: prepare chunk 3296.805MB:3410.493MB: 0.534s rss:857.953MB
+bpe tokenizer: process chunk: 13.183s rss:84.297MB
+bpe pre-tokenizing: 13.774s rss:233.266MB
+bpe tokenizer: prepare chunk 4433.636MB:4547.325MB: 0.491s rss:871.625MB
+bpe tokenizer: process chunk: 13.128s rss:54.391MB
+bpe pre-tokenizing: 13.799s rss:207.812MB
+bpe tokenizer: prepare chunk 5570.469MB:5684.156MB: 0.369s rss:849.500MB
+bpe tokenizer: process chunk: 14.882s rss:93.547MB
+bpe pre-tokenizing: 15.302s rss:233.031MB
+bpe tokenizer: prepare chunk 6593.623MB:6707.289MB: 0.728s rss:847.000MB
+bpe tokenizer: process chunk: 14.772s rss:79.375MB
+bpe pre-tokenizing: 15.549s rss:230.812MB
+bpe tokenizer: prepare chunk 7844.117MB:7957.804MB: 0.448s rss:855.609MB
+bpe tokenizer: process chunk: 15.308s rss:76.562MB
+bpe pre-tokenizing: 15.861s rss:229.688MB
+bpe tokenizer: prepare chunk 8867.264MB:8980.958MB: 0.869s rss:853.297MB
+bpe tokenizer: process chunk: 16.842s rss:78.531MB
+bpe pre-tokenizing: 17.788s rss:231.594MB
+bpe tokenizer: prepare chunk 10004.091MB:10117.790MB: 0.788s rss:861.047MB
+bpe tokenizer: process chunk: 17.351s rss:69.547MB
+bpe pre-tokenizing: 18.216s rss:231.125MB
+bpe tokenizer: prepare chunk 11254.616MB:11368.285MB: 0.459s rss:859.109MB
+bpe tokenizer: process chunk: 13.007s rss:418.422MB
+bpe pre-tokenizing: 13.467s rss:418.422MB
+bpe tokenizer: prepare chunk 1023.151MB:1136.831MB: 1.336s rss:522.266MB
+bpe tokenizer: process chunk: 11.446s rss:150.875MB
+bpe pre-tokenizing: 12.861s rss:278.844MB
+bpe tokenizer: prepare chunk 2046.293MB:2159.975MB: 1.259s rss:751.141MB
+bpe tokenizer: process chunk: 11.619s rss:268.969MB
+bpe pre-tokenizing: 12.902s rss:271.688MB
+bpe tokenizer: prepare chunk 3069.439MB:3183.121MB: 0.906s rss:621.328MB
+bpe tokenizer: process chunk: 12.585s rss:105.734MB
+bpe pre-tokenizing: 13.740s rss:231.234MB
+bpe tokenizer: prepare chunk 4206.266MB:4319.949MB: 0.362s rss:870.438MB
+bpe tokenizer: process chunk: 12.232s rss:87.312MB
+bpe pre-tokenizing: 12.644s rss:236.516MB
+bpe tokenizer: prepare chunk 5229.415MB:5343.113MB: 1.037s rss:823.906MB
+bpe tokenizer: process chunk: 15.161s rss:79.500MB
+bpe pre-tokenizing: 16.260s rss:231.312MB
+bpe tokenizer: prepare chunk 6366.245MB:6479.923MB: 0.242s rss:874.234MB
+bpe tokenizer: process chunk: 14.268s rss:67.781MB
+bpe pre-tokenizing: 14.573s rss:225.188MB
+bpe tokenizer: prepare chunk 7503.074MB:7616.751MB: 0.516s rss:875.531MB
+bpe tokenizer: process chunk: 14.912s rss:61.375MB
+bpe pre-tokenizing: 15.550s rss:223.828MB
+bpe tokenizer: prepare chunk 8639.902MB:8753.580MB: 0.577s rss:871.000MB
+bpe tokenizer: process chunk: 16.839s rss:67.031MB
+bpe pre-tokenizing: 17.571s rss:220.891MB
+bpe tokenizer: prepare chunk 9776.728MB:9890.410MB: 0.782s rss:852.016MB
+bpe tokenizer: process chunk: 16.841s rss:112.234MB
+bpe pre-tokenizing: 17.677s rss:263.656MB
+bpe tokenizer: prepare chunk 10799.874MB:10913.557MB: 0.874s rss:831.297MB
+bpe tokenizer: process chunk: 14.625s rss:294.906MB
+bpe pre-tokenizing: 15.503s rss:297.156MB
+pre tokenizing total time: 152.358s rss:495.016MB
+bpe pre-tokenizer: convert str to bytes: 5.041s rss:4525.812MB
+bpe setting up pair:tokens dict: 35.651s rss:6906.438MB
+bpe setting up pair:freq dict: 27.890s rss:6907.938MB
+bpe merger: vocab size:257 elapsed time:0.000s rss:6907.938MB
+bpe merger: vocab size:400 elapsed time:179.372s rss:5930.344MB
+bpe merger: vocab size:600 elapsed time:209.555s rss:6190.156MB
+bpe merger: vocab size:800 elapsed time:261.144s rss:5215.703MB
+bpe merger: vocab size:1000 elapsed time:273.047s rss:5926.250MB
+bpe merger: vocab size:1200 elapsed time:281.515s rss:5225.891MB
+bpe merger: vocab size:1400 elapsed time:290.518s rss:5728.719MB
+bpe merger: vocab size:1600 elapsed time:299.444s rss:5734.656MB
+bpe merger: vocab size:1800 elapsed time:306.817s rss:5555.125MB
+bpe merger: vocab size:2000 elapsed time:315.835s rss:5830.547MB
+bpe merger: vocab size:2200 elapsed time:323.768s rss:5865.078MB
+bpe merger: vocab size:2400 elapsed time:333.185s rss:5355.531MB
+bpe merger: vocab size:2600 elapsed time:345.417s rss:5398.547MB
+bpe merger: vocab size:2800 elapsed time:358.088s rss:5081.031MB
+bpe merger: vocab size:3000 elapsed time:371.079s rss:5060.500MB
+bpe merger: vocab size:3200 elapsed time:389.397s rss:5132.375MB
+bpe merger: vocab size:3400 elapsed time:402.079s rss:5371.375MB
+bpe merger: vocab size:3600 elapsed time:415.875s rss:4946.656MB
+bpe merger: vocab size:3800 elapsed time:427.878s rss:5331.891MB
+bpe merger: vocab size:4000 elapsed time:440.231s rss:5472.953MB
+bpe merger: vocab size:4200 elapsed time:459.594s rss:5300.359MB
+bpe merger: vocab size:4400 elapsed time:481.046s rss:5283.625MB
+bpe merger: vocab size:4600 elapsed time:502.886s rss:4682.000MB
+bpe merger: vocab size:4800 elapsed time:523.999s rss:5051.406MB
+bpe merger: vocab size:5000 elapsed time:541.945s rss:4672.656MB
+bpe merger: vocab size:5200 elapsed time:561.001s rss:5905.859MB
+bpe merger: vocab size:5400 elapsed time:578.109s rss:5197.859MB
+bpe merger: vocab size:5600 elapsed time:602.454s rss:4639.469MB
+bpe merger: vocab size:5800 elapsed time:626.081s rss:4912.000MB
+bpe merger: vocab size:6000 elapsed time:646.413s rss:4867.703MB
+bpe merger: vocab size:6200 elapsed time:700.557s rss:4933.547MB
+bpe merger: vocab size:6400 elapsed time:721.171s rss:5034.938MB
+bpe merger: vocab size:6600 elapsed time:761.622s rss:5903.953MB
+bpe merger: vocab size:6800 elapsed time:783.924s rss:5960.188MB
+bpe merger: vocab size:7000 elapsed time:815.328s rss:4840.969MB
+bpe merger: vocab size:7200 elapsed time:840.139s rss:4632.422MB
+bpe merger: vocab size:7400 elapsed time:866.591s rss:4431.578MB
+bpe merger: vocab size:7600 elapsed time:893.474s rss:4231.609MB
+bpe merger: vocab size:7800 elapsed time:923.068s rss:4372.062MB
+bpe merger: vocab size:8000 elapsed time:960.840s rss:4247.109MB
+bpe merger: vocab size:8200 elapsed time:995.499s rss:4078.859MB
+bpe merger: vocab size:8400 elapsed time:1035.185s rss:5755.031MB
+bpe merger: vocab size:8600 elapsed time:1076.464s rss:3461.188MB
+bpe merger: vocab size:8800 elapsed time:1118.555s rss:2496.531MB
+bpe merger: vocab size:9000 elapsed time:1160.759s rss:3224.922MB
+bpe merger: vocab size:9200 elapsed time:1206.208s rss:1894.688MB
+bpe merger: vocab size:9400 elapsed time:1251.996s rss:3431.688MB
+bpe merger: vocab size:9600 elapsed time:1298.084s rss:3339.906MB
+bpe merger: vocab size:9800 elapsed time:1345.069s rss:3275.422MB
+bpe merger: vocab size:10000 elapsed time:1392.514s rss:3089.969MB
+bpe merger: vocab size:10200 elapsed time:1441.546s rss:2996.062MB
+bpe merger: vocab size:10400 elapsed time:1490.624s rss:3046.125MB
+bpe merger: vocab size:10600 elapsed time:1538.298s rss:3159.344MB
+bpe merger: vocab size:10800 elapsed time:1575.643s rss:3392.125MB
+bpe merger: vocab size:11000 elapsed time:1615.289s rss:4438.312MB
+bpe merger: vocab size:11200 elapsed time:1651.123s rss:3785.609MB
+bpe merger: vocab size:11400 elapsed time:1686.969s rss:3865.188MB
+bpe merger: vocab size:11600 elapsed time:1723.705s rss:3814.781MB
+bpe merger: vocab size:11800 elapsed time:1761.241s rss:3992.062MB
+bpe merger: vocab size:12000 elapsed time:1798.732s rss:4038.812MB
+bpe merger: vocab size:12200 elapsed time:1837.968s rss:3660.547MB
+bpe merger: vocab size:12400 elapsed time:1881.296s rss:2996.172MB
+bpe merger: vocab size:12600 elapsed time:1924.493s rss:3060.953MB
+bpe merger: vocab size:12800 elapsed time:1968.322s rss:3013.594MB
+bpe merger: vocab size:13000 elapsed time:2012.465s rss:3428.922MB
+bpe merger: vocab size:13200 elapsed time:2065.260s rss:2974.156MB
+bpe merger: vocab size:13400 elapsed time:2117.198s rss:3225.422MB
+bpe merger: vocab size:13600 elapsed time:2163.792s rss:3103.891MB
+bpe merger: vocab size:13800 elapsed time:2209.068s rss:3966.703MB
+bpe merger: vocab size:14000 elapsed time:2254.534s rss:4082.359MB
+bpe merger: vocab size:14200 elapsed time:2304.609s rss:5491.938MB
+bpe merger: vocab size:14400 elapsed time:2352.031s rss:4366.797MB
+bpe merger: vocab size:14600 elapsed time:2399.454s rss:4272.328MB
+bpe merger: vocab size:14800 elapsed time:2447.733s rss:4036.016MB
+bpe merger: vocab size:15000 elapsed time:2496.403s rss:3540.047MB
+bpe merger: vocab size:15200 elapsed time:2546.075s rss:3941.812MB
+bpe merger: vocab size:15400 elapsed time:2595.758s rss:3932.172MB
+bpe merger: vocab size:15600 elapsed time:2646.306s rss:3809.406MB
+bpe merger: vocab size:15800 elapsed time:2697.627s rss:3645.000MB
+bpe merger: vocab size:16000 elapsed time:2755.138s rss:2432.438MB
+bpe merger: vocab size:16200 elapsed time:2815.515s rss:2839.531MB
+bpe merger: vocab size:16400 elapsed time:2874.817s rss:1721.875MB
+bpe merger: vocab size:16600 elapsed time:2930.262s rss:2883.641MB
+bpe merger: vocab size:16800 elapsed time:2989.744s rss:2749.891MB
+bpe merger: vocab size:17000 elapsed time:3043.601s rss:2980.625MB
+bpe merger: vocab size:17200 elapsed time:3112.717s rss:3254.094MB
+bpe merger: vocab size:17400 elapsed time:3169.717s rss:3548.047MB
+bpe merger: vocab size:17600 elapsed time:3227.933s rss:3193.453MB
+bpe merger: vocab size:17800 elapsed time:3287.006s rss:3133.469MB
+bpe merger: vocab size:18000 elapsed time:3345.666s rss:3346.328MB
+bpe merger: vocab size:18200 elapsed time:3405.798s rss:3022.734MB
+bpe merger: vocab size:18400 elapsed time:3467.028s rss:3067.406MB
+bpe merger: vocab size:18600 elapsed time:3531.776s rss:2320.062MB
+bpe merger: vocab size:18800 elapsed time:3599.307s rss:3630.609MB
+bpe merger: vocab size:19000 elapsed time:3666.031s rss:2848.016MB
+bpe merger: vocab size:19200 elapsed time:3732.675s rss:2863.453MB
+bpe merger: vocab size:19400 elapsed time:3797.379s rss:2627.078MB
+bpe merger: vocab size:19600 elapsed time:3860.915s rss:2697.000MB
+bpe merger: vocab size:19800 elapsed time:3927.685s rss:2374.500MB
+bpe merger: vocab size:20000 elapsed time:4000.636s rss:1045.609MB
+bpe merger: vocab size:20200 elapsed time:4066.712s rss:3326.641MB
+bpe merger: vocab size:20400 elapsed time:4129.850s rss:3617.000MB
+bpe merger: vocab size:20600 elapsed time:4194.352s rss:3599.703MB
+bpe merger: vocab size:20800 elapsed time:4258.844s rss:3654.828MB
+bpe merger: vocab size:21000 elapsed time:4323.644s rss:3767.312MB
+bpe merger: vocab size:21200 elapsed time:4388.669s rss:3457.469MB
+bpe merger: vocab size:21400 elapsed time:4454.779s rss:2985.406MB
+bpe merger: vocab size:21600 elapsed time:4523.647s rss:3198.953MB
+bpe merger: vocab size:21800 elapsed time:4590.378s rss:3479.203MB
+bpe merger: vocab size:22000 elapsed time:4658.509s rss:2960.438MB
+bpe merger: vocab size:22200 elapsed time:4727.341s rss:2669.438MB
+bpe merger: vocab size:22400 elapsed time:4796.667s rss:2498.453MB
+bpe merger: vocab size:22600 elapsed time:4865.126s rss:3201.984MB
+bpe merger: vocab size:22800 elapsed time:4935.013s rss:3176.359MB
+bpe merger: vocab size:23000 elapsed time:5007.778s rss:3321.797MB
+bpe merger: vocab size:23200 elapsed time:5078.285s rss:3263.547MB
+bpe merger: vocab size:23400 elapsed time:5149.948s rss:2851.219MB
+bpe merger: vocab size:23600 elapsed time:5220.913s rss:3213.156MB
+bpe merger: vocab size:23800 elapsed time:5293.104s rss:3269.969MB
+bpe merger: vocab size:24000 elapsed time:5367.354s rss:2653.641MB
+bpe merger: vocab size:24200 elapsed time:5441.605s rss:3153.953MB
+bpe merger: vocab size:24400 elapsed time:5514.754s rss:3058.891MB
+bpe merger: vocab size:24600 elapsed time:5589.145s rss:3032.047MB
+bpe merger: vocab size:24800 elapsed time:5669.547s rss:3393.625MB
+bpe merger: vocab size:25000 elapsed time:5745.156s rss:3502.828MB
+bpe merger: vocab size:25200 elapsed time:5822.421s rss:2960.812MB
+bpe merger: vocab size:25400 elapsed time:5899.153s rss:2841.562MB
+bpe merger: vocab size:25600 elapsed time:5975.502s rss:3225.125MB
+bpe merger: vocab size:25800 elapsed time:6052.671s rss:3074.250MB
+bpe merger: vocab size:26000 elapsed time:6129.357s rss:3163.891MB
+bpe merger: vocab size:26200 elapsed time:6207.324s rss:3113.156MB
+bpe merger: vocab size:26400 elapsed time:6286.298s rss:2969.047MB
+bpe merger: vocab size:26600 elapsed time:6367.191s rss:2682.812MB
+bpe merger: vocab size:26800 elapsed time:6447.226s rss:2946.531MB
+bpe merger: vocab size:27000 elapsed time:6527.034s rss:2824.344MB
+bpe merger: vocab size:27200 elapsed time:6607.608s rss:2759.859MB
+bpe merger: vocab size:27400 elapsed time:6687.655s rss:2974.219MB
+bpe merger: vocab size:27600 elapsed time:6770.496s rss:2323.938MB
+bpe merger: vocab size:27800 elapsed time:6856.144s rss:2494.719MB
+bpe merger: vocab size:28000 elapsed time:6941.482s rss:2358.500MB
+bpe merger: vocab size:28200 elapsed time:7031.299s rss:2284.375MB
+bpe merger: vocab size:28400 elapsed time:7117.317s rss:2515.625MB
+bpe merger: vocab size:28600 elapsed time:7202.890s rss:3029.203MB
+bpe merger: vocab size:28800 elapsed time:7286.665s rss:3164.047MB
+bpe merger: vocab size:29000 elapsed time:7370.124s rss:3127.734MB
+bpe merger: vocab size:29200 elapsed time:7461.080s rss:2424.109MB
+bpe merger: vocab size:29400 elapsed time:7546.141s rss:2424.531MB
+bpe merger: vocab size:29600 elapsed time:7631.562s rss:2716.062MB
+bpe merger: vocab size:29800 elapsed time:7717.782s rss:2474.781MB
+bpe merger: vocab size:30000 elapsed time:7804.201s rss:2565.656MB
+bpe merger: vocab size:30200 elapsed time:7892.931s rss:2334.875MB
+bpe merger: vocab size:30400 elapsed time:7991.049s rss:2136.734MB
+bpe merger: vocab size:30600 elapsed time:8079.893s rss:2827.938MB
+bpe merger: vocab size:30800 elapsed time:8174.237s rss:2718.859MB
+bpe merger: vocab size:31000 elapsed time:8265.548s rss:3012.531MB
+bpe merger: vocab size:31200 elapsed time:8356.113s rss:3493.203MB
+bpe merger: vocab size:31400 elapsed time:8446.155s rss:3497.156MB
+bpe merger: vocab size:31600 elapsed time:8537.221s rss:3613.203MB
+bpe merger: vocab size:31800 elapsed time:8628.455s rss:3568.641MB
+bpe merger: vocab size:32000 elapsed time:8720.048s rss:3762.828MB
+bpe main merger: 8720.048s rss:3762.953MB
+bpe merger: vocab size:32000 elapsed time:8720.049s rss:3763.125MB
+bpe main time: 8952.564s rss:3763.125MB
+dumping vocab.json into data/owt_train
+dumping merges.txt into data/owt_train
+bpe serilizing time: 0.076s rss:3611.578MB
+top 20 longest tokens are 
+[----------------------------------------------------------------]
+[ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ]
+[________________________________]
+[================================]
+[................................]
+[--------------------------------]
+[********************************]
+[ telecommunications]
+[ disproportionately]
+[ environmentalists]
+[ unconstitutional]
+[ responsibilities]
+[ misunderstanding]
+[ disproportionate]
+[ cryptocurrencies]
+[ counterterrorism]
+[ characterization]
+[————————————————]
+[ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ]
+[________________]
+maxrss is 7434.156MB
+
 
 **(b) 对比 TinyStories 与 OWT 的 tokenizer / 词表差异。**
 
