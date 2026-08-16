@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
 import json
 import regex as re
-
+from cs336_basics.common import gpt2_bytes_to_unicode
 
 class Tokenizer(ABC):
     """抽象基类：定义 tokenizer 的最小接口，不持有任何状态。"""
@@ -74,16 +74,25 @@ class BPETokenizer(Tokenizer):
         merges_filepath: str,
         special_tokens: list[str] | None = None,
     ) -> "BPETokenizer":
+
+        gpt2_byte_decoder = {v: k for k, v in gpt2_bytes_to_unicode().items()}
         # 读取并反序列化 vocab/merges（格式与 trainer 的输出对齐），再调用 cls(...)
         with open(vocab_filepath) as f:
-            vocab = json.load(f)
+            vocab_raw = json.load(f) # dict[str, int]，期望dict[int, bytes]
+        vocab_raw = {v: [gpt2_byte_decoder[e] for e in k] for k, v in vocab_raw.items()}
+        
+        vocab: dict[int, bytes] = {k:b''.join([bytes([e]) for e in v]) for k, v in vocab_raw.items()}
+
+
         merges = []
         with open(merges_filepath) as f:
             while True:
                 line = f.readline().strip().split(' ')
                 if len(line) < 2:
                     break
-                merges.append((line[0].encode(), line[1].encode()))
+                pair0 = b''.join([bytes([gpt2_byte_decoder[e]]) for e in line[0]])
+                pair1 = b''.join([bytes([gpt2_byte_decoder[e]]) for e in line[1]])
+                merges.append((pair0, pair1))
                 
         return BPETokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
 

@@ -934,19 +934,46 @@ max() 空集合崩:语料 merge 榨干时 pair_count 为空 → 要加"无 pair 
 **(a) 采样文档的压缩比(bytes/token)?**
 
 答:
+using vocab: data/tinystoriesV2_train/vocab.json
+using merges: data/tinystoriesV2_train/merges.txt
+encoding: data/TinyStoriesV2-GPT4-valid.txt
+total text size is 22493387bytes(22.493MB). the text has been compressed into 5465883 tokens
+compress ratio is 4.115bytes/token, total process time is 10.759s, throughput is 2090622.588bytes/s
 
 **(b) 交叉使用 tokenizer(TinyStories tokenizer 编码 OWT 等)会怎样?**
 
 答:
+using vocab: data/tinystoriesV2_train/vocab.json
+using merges: data/tinystoriesV2_train/merges.txt
+encoding: data/TinyStoriesV2-GPT4-valid.txt
+total text size is 22493387bytes(22.493MB). the text has been compressed into 5465883 tokens
+compress ratio is 4.115bytes/token, total process time is 10.759s, throughput is 2090622.588bytes/s
+using vocab: data/tinystoriesV2_train/vocab.json
+using merges: data/tinystoriesV2_train/merges.txt
+encoding: data/owt_valid.txt
+total text size is 287354132bytes(287.354MB). the text has been compressed into 91369966 tokens
+compress ratio is 3.145bytes/token, total process time is 152.116s, throughput is 1889048.804bytes/s
+using vocab: data/owt_train/vocab.json
+using merges: data/owt_train/merges.txt
+encoding: data/owt_valid.txt
+total text size is 287354132bytes(287.354MB). the text has been compressed into 66401098 tokens
+compress ratio is 4.328bytes/token, total process time is 173.758s, throughput is 1653756.444bytes/s
+
+
+
+throughput会提高，但压缩率不如本来的tokenizer
 
 **(c) tokenizer 吞吐量估算;编码 825GB Pile 需要多久?**
 
 答:
+2.17 MB/s
+The Pile 825 GiB → 408,983s = 113.6h = 4.73 天
+The Pile 825e9 B → 380,895s = 105.8h = 4.41 天
 
 **(d) 为什么 uint16 是存储 token ID 的合适选择?**
 
 答:
-
+因为vocab不超过32000，用uint16是能表示的最小整型0-65535，且2B对机器友好
 ---
 
 ## 3. Transformer Language Model Architecture
