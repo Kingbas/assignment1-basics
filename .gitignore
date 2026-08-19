@@ -169,3 +169,6 @@ data/
 
 .DS_Store
 *.svg
+
+# profile_bpe.sh 的输出：日志、火焰图、summary.json
+runs/

@@ -192,14 +192,15 @@ class TransformerLM(torch.nn.Module):
                 num_layers: int,
                 num_heads: int,
                 d_ff: int,
-                rope_theta: float,) -> None:
+                rope_theta: float,
+                device=None) -> None:
         super().__init__()
-        self.token_embeddings = Embedding(vocab_size, d_model)
+        self.token_embeddings = Embedding(vocab_size, d_model, device=device)
         self.layers = torch.nn.Sequential()
         for _ in range(num_layers):
-            self.layers.append(TransformerBlock(d_model, num_heads, d_ff, context_length, rope_theta))
-        self.ln_final = RMSNorm(d_model)
-        self.lm_head = Linear(d_model, vocab_size)
+            self.layers.append(TransformerBlock(d_model, num_heads, d_ff, context_length, rope_theta, device=device))
+        self.ln_final = RMSNorm(d_model, device=device)
+        self.lm_head = Linear(d_model, vocab_size, device=device)
         # 计算可学习参数量
         # vocab_size:  50,257
         # context_length:  1,024

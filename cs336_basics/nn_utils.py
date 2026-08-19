@@ -39,7 +39,7 @@ def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: flo
     # 将parameter放进容器中
     parameters = list(parameters)
     # 逐张量计算L2范式，累加并开根
-    grad_square_sum = torch.zeros([]) + 0.0
+    grad_square_sum = torch.zeros([], device=parameters[0].device) + 0.0
     for p in parameters:
         if p.grad is not None:
             grad_square_sum += p.grad.square().sum()
