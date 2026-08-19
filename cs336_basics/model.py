@@ -195,6 +195,9 @@ class TransformerLM(torch.nn.Module):
                 rope_theta: float,
                 device=None) -> None:
         super().__init__()
+        self.device = device
+        self.context_length = context_length
+        self.vocab_size = vocab_size
         self.token_embeddings = Embedding(vocab_size, d_model, device=device)
         self.layers = torch.nn.Sequential()
         for _ in range(num_layers):
