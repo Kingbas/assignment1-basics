@@ -53,8 +53,7 @@ def decode(model: TransformerLM, tokenizer:BPETokenizer, max_tokens, temperature
     return tokenizer.decode(output_token_ids) if output_token_ids[-1] != end_token_id else tokenizer.decode(output_token_ids[:-1])
 
 
-
-if __name__ == '__main__':
+def sanity_check():
     top_k = 5
     top_p = 1
     logits = torch.tensor([0.45, 0.4, 0.08, 0.05, 0.02])
@@ -70,4 +69,30 @@ if __name__ == '__main__':
     sorted_probs = torch.masked_fill(sorted_probs, mask, 0)
     # 归一化
     sorted_probs = sorted_probs / torch.sum(sorted_probs)
-    pass
+
+if __name__ == '__main__':
+    hyperparas = {
+        'vocab_size': 10000,
+        'context_length': 256,
+        'd_model': 512,
+        'num_layers': 4,
+        'num_heads': 16,
+        'd_ff': 1344,
+        'rope_theta': 10000,
+        'device': 'mps'
+    }
+    model = TransformerLM(**hyperparas)
+    model.load_state_dict(torch.load('data/exp_log/ckpt-1')['model_weights'])
+    model.eval()
+    tokenizer = BPETokenizer.from_files('data/tinystoriesV2_train/vocab.json', 'data/tinystoriesV2_train/merges.txt', ['<|endoftext|>'])
+
+    max_tokens = 256
+    temperature = 1
+    top_k = 30
+    top_p = 0.9
+    while True:
+        prompt = input('plz input anything you would like me to expand\ninput: ')
+        out = decode(model, tokenizer, max_tokens, temperature, top_k, top_p, prompt)
+        print(out)
+
+
